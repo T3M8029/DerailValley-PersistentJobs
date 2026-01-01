@@ -1,11 +1,13 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using UnityModManagerNet;
-using HarmonyLib;
-using PersistentJobsMod.Model;
-using UnityEngine;
+﻿using HarmonyLib;
 using MessageBox;
+using PersistentJobsMod.Model;
+using PersistentJobsMod.ModInteraction;
+using System;
+using System.IO;
+using System.Linq;
+using System.Reflection;
+using UnityEngine;
+using UnityModManagerNet;
 
 namespace PersistentJobsMod {
     public static class Main {
@@ -24,6 +26,9 @@ namespace PersistentJobsMod {
 
         public static Settings Settings { get; private set; }
 
+        public static UnityModManager.ModEntry PaxJobs { get; set; }
+        public static bool PaxJobsPresent { get; set; }
+
         public static void Load(UnityModManager.ModEntry modEntry) {
             _modEntry = modEntry;
 
@@ -37,6 +42,22 @@ namespace PersistentJobsMod {
             modEntry.OnSaveGUI = OnSaveGUI;
 
             WorldStreamingInit.LoadingFinished += WorldStreamingInitLoadingFinished;
+
+            PaxJobs = UnityModManager.modEntries.FirstOrDefault(m => m.Info.Id == "PassengerJobs" && m.Enabled && m.Active && !m.ErrorOnLoading && m.Version.ToString() == "5.1.1");
+            PaxJobsPresent = (PaxJobs != null);
+            if (PaxJobsPresent)
+            {
+                _modEntry.Logger.Log($"{PaxJobs.Info.DisplayName} version {PaxJobs.Version} is present, enabling mod compatibility");
+                if (!PaxJobsCompat.Initialize())
+                {
+                    PaxJobsPresent = false;
+                    _modEntry.Logger.Error("Passanger Jobs compatibility failed to load!");
+                }
+            }
+            else
+            {
+                _modEntry.Logger.Log($"Targeted version of Passanger Jobs (5.1.1) is not present, inactive, or has ran into errors, skipping mod compatibility");
+            }
         }
 
         static bool OnToggle(UnityModManager.ModEntry modEntry, bool isTogglingOn) {

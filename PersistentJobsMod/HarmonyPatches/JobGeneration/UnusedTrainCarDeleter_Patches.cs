@@ -11,6 +11,7 @@ using PersistentJobsMod.CarSpawningJobGenerators;
 using PersistentJobsMod.Extensions;
 using PersistentJobsMod.JobGenerators;
 using PersistentJobsMod.Model;
+using PersistentJobsMod.ModInteraction;
 using PersistentJobsMod.Utilities;
 using UnityEngine;
 using Random = System.Random;
@@ -179,7 +180,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
             return jobChainControllers.SelectMany(jcc => TrainCar.ExtractTrainCars(jcc.carsForJobChain)).ToList();
         }
 
-        private static void FinalizeJobChainControllerAndGenerateFirstJob(JobChainController jobChainController) {
+        public static void FinalizeJobChainControllerAndGenerateFirstJob(JobChainController jobChainController) {
             EnsureTrainCarsAreConvertedToNonPlayerSpawned(TrainCar.ExtractTrainCars(jobChainController.carsForJobChain));
             jobChainController.FinalizeSetupAndGenerateFirstJob();
 
@@ -189,13 +190,23 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
         private static IReadOnlyList<JobChainController> ReassignJoblessRegularTrainCarsToJobsInStationAndCreateJobChainControllers(StationController station, List<Trainset> trainsets, Random random) {
             Main._modEntry.Logger.Log($"Reassigning train cars to jobs in station {station.logicStation.ID}: {trainsets.SelectMany(ts => ts.cars).Count()} cars in {trainsets.Count} trainsets need to be reassigned.");
 
-            var statusTrainCarGroups = trainsets.SelectMany(s => s.cars.GroupConsecutiveBy(GetTrainCarReassignStatus)).ToList();
+            var statusTrainCarGroups = trainsets.SelectMany(s => s.cars.GroupConsecutiveBy(tc => GetTrainCarReassignStatus(tc, false))).ToList();
+
+            List<IReadOnlyList<TrainCar>> paxConsecutiveTrainCarGroups = null;
+            if (Main.PaxJobsPresent)
+            {
+                paxConsecutiveTrainCarGroups = statusTrainCarGroups.Where(s => s.Key == TrainCarReassignStatus.PaxCar).Select(s => s.Items).ToList();
+                Main._modEntry.Logger.Log($"Found {paxConsecutiveTrainCarGroups.Count} passanger train car groups with a total of {paxConsecutiveTrainCarGroups.SelectMany(g => g).Count()} cars");
+                PaxJobsCompat.DecideForPaxCarGroups(paxConsecutiveTrainCarGroups, station);
+                statusTrainCarGroups.RemoveAll(stcg => statusTrainCarGroups.Where(s => s.Key == TrainCarReassignStatus.PaxCar).ToList().Contains(stcg));
+            }
 
             var emptyConsecutiveTrainCarGroups = statusTrainCarGroups.Where(s => s.Key == TrainCarReassignStatus.Empty).Select(s => s.Items).ToList();
             var loadedConsecutiveTrainCarGroups = statusTrainCarGroups.Where(s => s.Key == TrainCarReassignStatus.Loaded).Select(s => s.Items).ToList();
 
             Main._modEntry.Logger.Log($"Found {emptyConsecutiveTrainCarGroups.Count} empty train car groups with a total of {emptyConsecutiveTrainCarGroups.SelectMany(g => g).Count()} cars");
             Main._modEntry.Logger.Log($"Found {loadedConsecutiveTrainCarGroups.Count} loaded train car groups with a total of {loadedConsecutiveTrainCarGroups.SelectMany(g => g).Count()} cars");
+            if (Main.PaxJobsPresent && ((paxConsecutiveTrainCarGroups.SelectMany(g => g).Count() + emptyConsecutiveTrainCarGroups.SelectMany(g => g).Count() + loadedConsecutiveTrainCarGroups.SelectMany(g => g).Count()) != trainsets.SelectMany(ts => ts.cars).Count())) Main._modEntry.Logger.Error($"Mismatch in number of cars! Trainset cars: {trainsets.SelectMany(ts => ts.cars).Count()}; Pax cars: {paxConsecutiveTrainCarGroups.SelectMany(g => g).Count()}; empty cars: {emptyConsecutiveTrainCarGroups.SelectMany(g => g).Count()}; loaded cars: {loadedConsecutiveTrainCarGroups.SelectMany(g => g).Count()}");
 
             var (loadableConsecuteTrainCarGroups, notLoadableConsecutiveTrainCarGroups) = DivideEmptyConsecutiveTrainCarGroupsIntoLoadableAndNotLoadable(station, emptyConsecutiveTrainCarGroups);
             var (unloadableConsecutiveTrainCarGroups, notUnloadableConsecutiveTrainCarGroups) = DivideLoadedConsecutiveTrainCarGroupsIntoUnloadableAndNotUnloadable(station, loadedConsecutiveTrainCarGroups);
@@ -572,16 +583,19 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
             return cargoGroup.CargoTypes.Intersect(trainCarLargoTypes).ToList();
         }
 
-        private enum TrainCarReassignStatus {
+        public enum TrainCarReassignStatus {
             HasJob,
             Empty,
             Loaded,
             NonRegularTrainCar,
+            PaxCar
         }
 
-        private static TrainCarReassignStatus GetTrainCarReassignStatus(TrainCar trainCar) {
+        public static TrainCarReassignStatus GetTrainCarReassignStatus(TrainCar trainCar, bool ingnorePaxCarStatus = true) {
             if (JobsManager.Instance.GetJobOfCar(trainCar.logicCar) != null) {
                 return TrainCarReassignStatus.HasJob;
+            } else if ((!ingnorePaxCarStatus && Main.PaxJobsPresent) && PaxJobsCompat.IsPaxCars(trainCar)) {              
+                    return TrainCarReassignStatus.PaxCar;
             } else if (CarTypes.IsRegularCar(trainCar.carLivery)) {
                 if (trainCar.LoadedCargoAmount < 0.001f) {
                     return TrainCarReassignStatus.Empty;
