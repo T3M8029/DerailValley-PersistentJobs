@@ -225,17 +225,16 @@ namespace PersistentJobsMod.ModInteraction
 
         public static List<IReadOnlyList<TrainCar>> FilterTrainCarGroups(List<IReadOnlyList<TrainCar>> trainCarGroups)
         {
-            foreach (var trainCars in trainCarGroups)
+            trainCarGroups.RemoveAll(trainCars =>
             {
-                if (trainCars == null || trainCars.Count() < 1)
+                if (trainCars == null || trainCars.Count < 1)
                 {
                     Main._modEntry.Logger.Error("[FilterTrainCarGroups] Invalid trainCars input thrown out");
-                    trainCarGroups.Remove(trainCars);
+                    return true; // Remove
                 }
-
                 var startingTrack = CarTrackAssignment.FindNearestNamedTrackOrNull(trainCars);
-                if (startingTrack == null) trainCarGroups.Remove(trainCars);
-            }
+                return startingTrack == null; // Remove if null
+            });
             return trainCarGroups;
         }
 
