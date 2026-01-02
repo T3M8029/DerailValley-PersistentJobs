@@ -20,7 +20,7 @@ namespace PersistentJobsMod.ModInteraction
         private static Assembly asm;
 
         private static Type _RouteManager;
-        private static Type _ConsistManger;
+        private static Type _ConsistManager;
         private static Type _RouteTrack;
         private static Type _PassConsistInfo;
         private static Type _PassengerJobGenerator;
@@ -28,9 +28,16 @@ namespace PersistentJobsMod.ModInteraction
 
         private static ConstructorInfo _RouteTrackCtor;
         private static ConstructorInfo _PassConsistInfoCtor;
+        private static MethodInfo _TryGetInstance;
+        private static MethodInfo _GenerateJob;
+        private static MethodInfo _GetPassengerCars;
+        private static MethodInfo _IsPassengerStation;
+        private static MethodInfo _GetStationData;
+        private static MethodInfo _GetPlatforms;
 
-        private static MethodInfo TryGetInstance;
-        private static MethodInfo GenerateJob;
+        private static PropertyInfo _AllTracksProperty;
+        private static PropertyInfo _RouteTrackLengthProp;
+        private static FieldInfo _RouteTrackTrackField;
 
         private static Random _Random;
 
@@ -41,14 +48,25 @@ namespace PersistentJobsMod.ModInteraction
                 asm = Main.PaxJobs.Assembly;
 
                 _RouteManager = CompatAccess.Type("PassengerJobs.Generation.RouteManager");
-                _ConsistManger = CompatAccess.Type("PassengerJobs.Generation.ConsistManager");
+                _ConsistManager = CompatAccess.Type("PassengerJobs.Generation.ConsistManager");
                 _RouteTrack = CompatAccess.Type("PassengerJobs.Generation.RouteTrack");
                 _PassConsistInfo = CompatAccess.Type("PassengerJobs.Generation.PassConsistInfo");
                 _PassengerJobGenerator = CompatAccess.Type("PassengerJobs.Generation.PassengerJobGenerator");
                 _IPassDestination = CompatAccess.Type("PassengerJobs.Generation.IPassDestination");
 
-                TryGetInstance = CompatAccess.Method(_PassengerJobGenerator, "TryGetInstance");
-                GenerateJob = CompatAccess.Method(_PassengerJobGenerator, "GenerateJob", new[] { typeof(JobType), _PassConsistInfo });
+                _TryGetInstance = CompatAccess.Method(_PassengerJobGenerator, "TryGetInstance");
+                _GenerateJob = CompatAccess.Method(_PassengerJobGenerator, "GenerateJob", new[] { typeof(JobType), _PassConsistInfo });
+                _GetPassengerCars = CompatAccess.Method(_ConsistManager, "GetPassengerCars");
+                _IsPassengerStation = CompatAccess.Method(_RouteManager, "IsPassengerStation");
+                _GetStationData = CompatAccess.Method(_RouteManager, "GetStationData");
+                _GetPlatforms = CompatAccess.Method(_IPassDestination, "GetPlatforms", new[] { typeof(bool) });
+
+                _AllTracksProperty = CompatAccess.Property(_IPassDestination, "AllTracks");
+                _RouteTrackLengthProp = CompatAccess.Property(_RouteTrack, "Length");
+                _RouteTrackTrackField = CompatAccess.Field(_RouteTrack, "Track");
+
+                _RouteTrackCtor = CompatAccess.Ctor(_RouteTrack, new[] { _IPassDestination, typeof(Track) });
+                _PassConsistInfoCtor = CompatAccess.Ctor(_PassConsistInfo, new[] { _RouteTrack, typeof(List<Car>) });
 
                 _Random = new Random();
             }
@@ -64,17 +82,9 @@ namespace PersistentJobsMod.ModInteraction
         internal static class CompatAccess
         {
             public static Type Type(string fullName) => AccessTools.TypeByName(fullName) ?? throw new TypeLoadException($"Type not found: {fullName}");
-
-            public static MethodInfo Method(Type type, string name, Type[] args = null)
-            {
-                var mi = args == null ? AccessTools.Method(type, name) : AccessTools.Method(type, name, args);
-                return mi ?? throw new MissingMethodException(type.FullName, name);
-            }
-
+            public static MethodInfo Method(Type type, string name, Type[] args = null) => (args == null ? AccessTools.Method(type, name) : AccessTools.Method(type, name, args)) ?? throw new MissingMethodException(type.FullName, name);
             public static ConstructorInfo Ctor(Type type, Type[] args) => AccessTools.Constructor(type, args) ?? throw new MissingMethodException(type.FullName, ".ctor");
-
             public static PropertyInfo Property(Type type, string name) => AccessTools.Property(type, name) ?? throw new MissingMemberException(type.FullName, name);
-
             public static FieldInfo Field(Type type, string name) => AccessTools.Field(type, name) ?? throw new MissingFieldException(type.FullName, name);
         }
 
@@ -82,7 +92,7 @@ namespace PersistentJobsMod.ModInteraction
         {
             generator = null;
             var args = new object[] { yardId, null };
-            if (!(bool)TryGetInstance.Invoke(null, args))
+            if (!(bool)_TryGetInstance.Invoke(null, args))
             {
                 Main._modEntry.Logger.Error($"Couldn´t get instance of PaxJobsGenerator for {yardId}");
                 return false;
@@ -102,54 +112,32 @@ namespace PersistentJobsMod.ModInteraction
                 return false;
             }
 
-            passengerChainController = GenerateJob.Invoke(generator, new object[] { jobType, passConsistInfo });
+            passengerChainController = _GenerateJob.Invoke(generator, new object[] { jobType, passConsistInfo });
             if (passengerChainController == null) Main._modEntry.Logger.Error("Couldn´t generate PaxJob - null from there");
             return passengerChainController != null;
         }
 
-        public static object CreateRouteTrack(object IPassDestination, Track terminalTrack)
-        {
-            _RouteTrackCtor = CompatAccess.Ctor(_RouteTrack, new[] { _IPassDestination, typeof(Track) });
-            return _RouteTrackCtor.Invoke(new object[] { IPassDestination, terminalTrack });
-        }
+        public static object CreateRouteTrack(object IPassDestination, Track terminalTrack) => _RouteTrackCtor.Invoke(new object[] { IPassDestination, terminalTrack });
 
-        public static object CreatePassConsistInfo(object routeTrack, List<Car> cars)
-        {
-            _PassConsistInfoCtor = CompatAccess.Ctor(_PassConsistInfo, new[] { _RouteTrack, typeof(List<Car>) });
-            return _PassConsistInfoCtor.Invoke(new object[] { routeTrack, cars });
-        }
+        public static object CreatePassConsistInfo(object routeTrack, List<Car> cars) => _PassConsistInfoCtor.Invoke(new object[] { routeTrack, cars });
 
         public static bool IsPaxCars(TrainCar car)
         {
-            var GetPassengerCars = AccessTools.Method(_ConsistManger, "GetPassengerCars");
-            IEnumerable<TrainCarLivery> carLiveries = (IEnumerable<TrainCarLivery>)(GetPassengerCars?.Invoke(null, null));
-            return (carLiveries != null && car.carLivery != null) && carLiveries.Contains(car.carLivery);
+            var carLiveries = (IEnumerable<TrainCarLivery>)_GetPassengerCars.Invoke(null, null);
+            return carLiveries != null && car.carLivery != null && carLiveries.Contains(car.carLivery);
         }
 
-        public static bool IsPassengerStation(string yardId)
-        {
-            var IsPassengerStation = AccessTools.Method(_RouteManager, "IsPassengerStation");
-            return (bool)(IsPassengerStation?.Invoke(null, new object[] { yardId }));
-        }
+        public static bool IsPassengerStation(string yardId) => (bool)(_IsPassengerStation?.Invoke(null, new object[] { yardId }));
 
         public static List<StationController> AllPaxStations() => StationController.allStations.Where(st => IsPassengerStation(st.stationInfo.YardID)).ToList();
 
-        public static object GetStationData(string yardId)
-        {
-            var GetStationData = AccessTools.Method(_RouteManager, "GetStationData");
-            return /*IPassDestination : PassStationData*/GetStationData?.Invoke(null, new object[] { yardId });
-        }
+        public static object GetStationData(string yardId) => _GetStationData?.Invoke(null, new object[] { yardId }); // output is IPassDestination : PassStationData
 
-        public static List<Track> AllPaxTracksForStationData(string yardId)
-        {
-            PropertyInfo _allTracksProperty = CompatAccess.Property(_IPassDestination, "AllTracks");
-            return ((IEnumerable<Track>)_allTracksProperty.GetValue(GetStationData(yardId))).ToList();
-        }
+        public static List<Track> AllPaxTracksForStationData(string yardId) => ((IEnumerable<Track>)_AllTracksProperty.GetValue(GetStationData(yardId))).ToList();
 
         public static IEnumerable<object> GetPlatforms(object stationData, bool onlyTerminusTracks = false)
         {
-            var _getPlatformsMethod = AccessTools.Method(_IPassDestination, "GetPlatforms", new[] { typeof(bool) });
-            var result = _getPlatformsMethod.Invoke(stationData, new object[] { onlyTerminusTracks });
+            var result = _GetPlatforms.Invoke(stationData, new object[] { onlyTerminusTracks });
 
             // "Cast to non-generic IEnumerable, which works for both struct and class collections" <-- AI´s fix of one runtime crash, I don´t understand this fully...
             if (result is System.Collections.IEnumerable enumerable)
@@ -161,17 +149,9 @@ namespace PersistentJobsMod.ModInteraction
             }
         }
 
-        public static Track GetRouteTractTrackField(object routeTrack)
-        {
-            FieldInfo RouteTrackTrackField = _RouteTrack.GetField("Track", BindingFlags.Public | BindingFlags.Instance);
-            return (Track)RouteTrackTrackField.GetValue(routeTrack);
-        }
+        public static Track GetRouteTractTrackField(object routeTrack) => (Track)_RouteTrackTrackField.GetValue(routeTrack);
 
-        public static double GetRouteTrackLength(object routeTrack)
-        {
-            PropertyInfo lengthProp = CompatAccess.Property(_RouteTrack, "Length");
-            return (double)lengthProp.GetValue(routeTrack);
-        }
+        public static double GetRouteTrackLength(object routeTrack) => (double)_RouteTrackLengthProp.GetValue(routeTrack);
 
         public static bool CanFitInPaxStation(StationController paxStation, List<TrainCar> trainCars)
         {
