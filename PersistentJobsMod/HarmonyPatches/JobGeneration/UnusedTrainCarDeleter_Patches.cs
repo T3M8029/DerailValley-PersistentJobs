@@ -190,6 +190,8 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
         private static IReadOnlyList<JobChainController> ReassignJoblessRegularTrainCarsToJobsInStationAndCreateJobChainControllers(StationController station, List<Trainset> trainsets, Random random) {
             Main._modEntry.Logger.Log($"Reassigning train cars to jobs in station {station.logicStation.ID}: {trainsets.SelectMany(ts => ts.cars).Count()} cars in {trainsets.Count} trainsets need to be reassigned.");
 
+            var result = new List<JobChainController>();
+
             var statusTrainCarGroups = trainsets.SelectMany(s => s.cars.GroupConsecutiveBy(tc => GetTrainCarReassignStatus(tc, false))).ToList();
 
             List<IReadOnlyList<TrainCar>> paxConsecutiveTrainCarGroups = null;
@@ -197,7 +199,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
             {
                 paxConsecutiveTrainCarGroups = statusTrainCarGroups.Where(s => s.Key == TrainCarReassignStatus.PaxCar).Select(s => s.Items).ToList();
                 Main._modEntry.Logger.Log($"Found {paxConsecutiveTrainCarGroups.Count} passanger train car groups with a total of {paxConsecutiveTrainCarGroups.SelectMany(g => g).Count()} cars");
-                PaxJobsCompat.DecideForPaxCarGroups(paxConsecutiveTrainCarGroups, station);
+                result.AddRange(PaxJobsCompat.DecideForPaxCarGroups(paxConsecutiveTrainCarGroups, station));
                 statusTrainCarGroups.RemoveAll(stcg => statusTrainCarGroups.Where(s => s.Key == TrainCarReassignStatus.PaxCar).ToList().Contains(stcg));
             }
 
@@ -210,8 +212,6 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
 
             var (loadableConsecuteTrainCarGroups, notLoadableConsecutiveTrainCarGroups) = DivideEmptyConsecutiveTrainCarGroupsIntoLoadableAndNotLoadable(station, emptyConsecutiveTrainCarGroups);
             var (unloadableConsecutiveTrainCarGroups, notUnloadableConsecutiveTrainCarGroups) = DivideLoadedConsecutiveTrainCarGroupsIntoUnloadableAndNotUnloadable(station, loadedConsecutiveTrainCarGroups);
-
-            var result = new List<JobChainController>();
 
             // generate empty haul jobs for empty train cars not loadable at this station
             foreach (var carGroup in notLoadableConsecutiveTrainCarGroups) {
@@ -607,7 +607,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
             }
         }
 
-        private static void EnsureTrainCarsAreConvertedToNonPlayerSpawned(List<TrainCar> trainCars) {
+        public static void EnsureTrainCarsAreConvertedToNonPlayerSpawned(List<TrainCar> trainCars) {
             // force job's train cars to not be treated as player spawned
             // DV will complain if we don't do this
             foreach (var trainCar in trainCars) {
