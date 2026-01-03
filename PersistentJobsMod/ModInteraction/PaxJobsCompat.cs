@@ -3,7 +3,6 @@ using DV.Logic.Job;
 using DV.ThingTypes;
 using HarmonyLib;
 using PersistentJobsMod.Extensions;
-using PersistentJobsMod.HarmonyPatches.JobGeneration;
 using PersistentJobsMod.JobGenerators;
 using PersistentJobsMod.Utilities;
 using System;
@@ -220,19 +219,40 @@ namespace PersistentJobsMod.ModInteraction
                 Main._modEntry.Logger.Error($"Single pax car {trainCars.First().ID} cannot be reassigned");
                 return result;
             }
+            
+            var (emptyConsecutiveTrainCarGroups, loadedConsecutiveTrainCarGroups) = SortCGIntoEmptyAndLoaded(new List<IReadOnlyList<TrainCar>> { trainCars });
+            if (emptyConsecutiveTrainCarGroups.Any())
+            {
+                foreach (var emptyTrainCars in emptyConsecutiveTrainCarGroups)
+                {
+                    Main._modEntry.Logger.Log($"Spilitting consist starting with car {emptyTrainCars.First().ID}");
+                    var (first, second) = SplitInHalf((List<TrainCar>)emptyTrainCars);
+                    HandleEmptyPaxCars(first, station, out List<JobChainController> outJobChainControllers);
+                    result.AddRange(outJobChainControllers);
+                    HandleEmptyPaxCars(second, station, out outJobChainControllers);
+                    result.AddRange(outJobChainControllers);
+                }
+            }
 
-            Main._modEntry.Logger.Log($"Spilitting consist starting with car {trainCars.First().ID}");
-            var (first, second) = SplitInHalf(trainCars);
-            HandleEmptyPaxCars(first, station, out List<JobChainController> outJobChainControllers);
-            result.AddRange(outJobChainControllers);
-            HandleEmptyPaxCars(second, station, out outJobChainControllers);
-            result.AddRange(outJobChainControllers);
+            if (loadedConsecutiveTrainCarGroups.Any())
+            {
+                foreach (var loadedTrainCars in loadedConsecutiveTrainCarGroups)
+                {
+                    Main._modEntry.Logger.Log($"Spilitting consist starting with car {loadedTrainCars.First().ID}");
+                    var (first, second) = SplitInHalf((List<TrainCar>)loadedTrainCars);
+                    HandleLoadedPaxCars(first, station, out List<JobChainController> outJobChainControllers);
+                    result.AddRange(outJobChainControllers);
+                    HandleLoadedPaxCars(second, station, out outJobChainControllers);
+                    result.AddRange(outJobChainControllers);
+                }
+            }
+
             return result;
         }
 
         public static (List<IReadOnlyList<TrainCar>>, List<IReadOnlyList<TrainCar>>) SortCGIntoEmptyAndLoaded(List<IReadOnlyList<TrainCar>> paxConsecutiveTrainCarGroups)
         {
-            var statusTrainCarGroups = paxConsecutiveTrainCarGroups.SelectMany(cars => cars.GroupConsecutiveBy(tc => UnusedTrainCarDeleter_Patches.GetTrainCarReassignStatus(tc))).ToList();
+            var statusTrainCarGroups = paxConsecutiveTrainCarGroups.SelectMany(cars => cars.GroupConsecutiveBy(tc => GetTrainCarReassignStatus(tc))).ToList();
             var emptyConsecutiveTrainCarGroups = statusTrainCarGroups.Where(s => s.Key == TrainCarReassignStatus.Empty).Select(s => s.Items).ToList();
             var loadedConsecutiveTrainCarGroups = statusTrainCarGroups.Where(s => s.Key == TrainCarReassignStatus.Loaded).Select(s => s.Items).ToList();
 
@@ -294,11 +314,59 @@ namespace PersistentJobsMod.ModInteraction
             jobChainControllers = new();
 
             var startingTrack = CarTrackAssignment.FindNearestNamedTrackOrNull(trainCars);
-            if (startingTrack.ID.yardId != station.stationInfo.YardID)
+            if (startingTrack == null)
             {
-                Main._modEntry.Logger.Error($"[HandleEmptyPaxCars] Station Track mismatch,this should´t happen!");
+                Main._modEntry.Logger.Error("[HandleEmptyPaxCars] No starting track found");
                 return;
             }
+
+            if (startingTrack.ID.yardId != station.stationInfo.YardID)
+            {
+                Main._modEntry.Logger.Error("[HandleEmptyPaxCars] Station mismatch");
+                return;
+            }
+
+            if (IsPassengerStation(station.stationInfo.YardID))
+            {
+                var stationData = GetStationData(station.stationInfo.YardID);
+                var fittingPlatforms = GetFittingPlatforms(stationData, trainCars);
+
+                if (!fittingPlatforms.Any())
+                {
+                    jobChainControllers.AddRange(HandleSplitOrFail(trainCars, station));
+                    return;
+                }
+
+                JobType jobType = PickPassengerJobType(trainCars.Count);
+                //jobChainControllers.AddRange(TryGeneratePartialPassengerJob(station, trainCars, fittingPlatforms, jobType)); - not implemented now, need to skip first/second task (pax loading in start station), have to go deeper than PassangerJobGenerator.GenerateJob(...)
+                return;
+            }
+            else
+            {
+                Main._modEntry.Logger.Log($"Loaded consist of {trainCars.Count()} pax cars starting with {trainCars.First().ID} on track {startingTrack.ID.FullID} needs to be transported to a pax jobs station to get unloaded");
+                //generate FH job to random pax station: use already existing mod logic elswhere -- potentially chnge to use SP tracks which PaxJobs currently doesn´t - wait for update?
+                StationController viableDestStation = AllPaxStations().Distinct().Where(st => st != station).Where(st => CanFitInStation(GetStationData(st.stationInfo.YardID), trainCars)).OrderBy(_ => _Random.Next()).FirstOrDefault();
+                if (viableDestStation != null)
+                {
+                    var viableDestStationStationData = GetStationData(viableDestStation.stationInfo.YardID);
+                    Track possibleDestinationTrack = (GetPlatforms(viableDestStationStationData).Select(GetRouteTractTrackField)).Where(t => GetRouteTrackLength(GetRouteTrackById(t.ID.FullID)) > CarSpawner.Instance.GetTotalCarsLength(TrainCar.ExtractLogicCars(trainCars), true)).DefaultIfEmpty(null).ToList().GetRandomElement();
+                    JobChainController transportJobChainController = TransportJobGenerator.TryGenerateJobChainController(station, startingTrack, viableDestStation, trainCars, Enumerable.Repeat((CargoType)1000, trainCars.Count()).ToList(), _Random, false, possibleDestinationTrack);
+                    if (transportJobChainController != null)
+                    {
+                        FinalizeJobChainControllerAndGenerateFirstJob(transportJobChainController);
+                        jobChainControllers.Add(transportJobChainController);
+                        return;
+                    }
+                }
+                else
+                {
+                    Main._modEntry.Logger.Error($"Loaded consist of {trainCars.Count()} pax cars starting with {trainCars.First().ID} can´t be reassigned a LH to any pax station, attempting splitting");
+                    jobChainControllers.AddRange(HandleSplitOrFail(trainCars, station));
+                    return;
+                }
+            }
+
+            Main._modEntry.Logger.Error("[HandleEmptyPaxCars] End of function reached possibly without reassigning, this shouldn´t happen!");
         }
 
         public static void HandleEmptyPaxCars(List<TrainCar> trainCars, StationController station, out List<JobChainController> jobChainControllers)
@@ -325,7 +393,7 @@ namespace PersistentJobsMod.ModInteraction
 
                 if (!fittingPlatforms.Any())
                 {
-                    HandleSplitOrFail(trainCars, station);
+                    jobChainControllers.AddRange(HandleSplitOrFail(trainCars, station));
                     return;
                 }
 
@@ -335,7 +403,7 @@ namespace PersistentJobsMod.ModInteraction
             }
             else
             {
-                Main._modEntry.Logger.Log($"Empty consist of {trainCars.Count()} pax cars starting with {trainCars.First().ID} on track {startingTrack.ID.FullID} needs to be transported to a pax jobs station to get reassigned");
+                Main._modEntry.Logger.Log($"Empty consist of {trainCars.Count()} pax cars starting with {trainCars.First().ID} on track {startingTrack.ID.FullID} needs to be transported to a pax jobs station to get reassigned a pax job");
                 //generate LH job to random pax station: use already existing mod logic elswhere -- potentially chnge to use SP tracks which PaxJobs currently doesn´t - wait for update?
                 StationController viableDestStation = AllPaxStations().Distinct().Where(st => st != station).Where(st => CanFitInStation(GetStationData(st.stationInfo.YardID), trainCars)).OrderBy(_ => _Random.Next()).FirstOrDefault();
                 if (viableDestStation != null)
@@ -353,7 +421,7 @@ namespace PersistentJobsMod.ModInteraction
                 else
                 {
                     Main._modEntry.Logger.Error($"Empty consist of {trainCars.Count()} pax cars starting with {trainCars.First().ID} can´t be reassigned a LH to any pax station, attempting splitting");
-                    HandleSplitOrFail(trainCars, station);
+                    jobChainControllers.AddRange(HandleSplitOrFail(trainCars, station));
                     return;
                 }
             }
