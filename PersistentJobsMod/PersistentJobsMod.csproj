@@ -109,6 +109,7 @@
     <Compile Include="Console.cs" />
     <Compile Include="CarSpawningJobGenerators\EmptyHaulJobWithCarsGenerator.cs" />
     <Compile Include="HarmonyPatches\Console\Console_Patches.cs" />
+    <Compile Include="HarmonyPatches\JobChainControllers\StaticShuntingLoadJobDefinition_Patch.cs" />
     <Compile Include="HarmonyPatches\Save\SaveGameData_RemoveData_Patch.cs" />
     <Compile Include="HarmonyPatches\Save\StartGameData_FromSaveGame_Patch.cs" />
     <Compile Include="HarmonyPatches\Sleeping\BedSleepingController_Patches.cs" />
