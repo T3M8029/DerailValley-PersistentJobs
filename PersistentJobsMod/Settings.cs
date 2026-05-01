@@ -8,7 +8,7 @@ namespace PersistentJobsMod {
         public bool PreventStartingShuntingJobForCarsOnWarehouseTrackMessageWasShown = false;
 
         [Draw("Show track signs for all named tracks")]
-        public bool GenerateTrackSigns = true;
+        public bool GenerateTrackSigns = false;
 
         public override void Save(UnityModManager.ModEntry modEntry) {
             Save(this, modEntry);
