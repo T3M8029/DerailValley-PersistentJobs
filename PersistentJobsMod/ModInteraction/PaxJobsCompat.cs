@@ -127,8 +127,8 @@ namespace PersistentJobsMod.ModInteraction
         private static TaskType _CityLoadingTaskType;
         private static TaskType _RuralLoadingTaskType;
 
-        private static JobType _PassengerExpress;
-        private static JobType _PassengerLocal;
+        public static JobType _PassengerExpress;
+        public static JobType _PassengerLocal;
 
         private static object _RouteTypeExpress;
         private static object _RouteTypeLocal;

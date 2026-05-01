@@ -201,6 +201,9 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
                 if (job == null) {
                     var message = $"[PersistentJobs] The job of a StaticJobDefinition ({staticJobDefinition.GetType()}) at index {i} in the jobChain of a JobChainController is null. List of jobs in the jobChain: {string.Join(", ", jobChain.Select(sjd => sjd?.job?.ID ?? "null"))}";
                     Debug.LogWarning(message);
+                } else if ((job.jobType != PaxJobsCompat._PassengerExpress) && (job.jobType != PaxJobsCompat._PassengerLocal)) {
+                    var message = $"[PersistentJobs] Skipping track reservations as {job.ID} is a passenger job";
+                    Debug.Log(message);
                 } else {
                     if (jobChainController.jobDefToCurrentlyReservedTracks.TryGetValue(staticJobDefinition, out var trackReservations)) {
                         for (var j = 0; j < trackReservations.Count; j++) {
@@ -209,23 +212,25 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
                             if (YardTracksOrganizer.Instance.GetFreeSpaceOnTrack(intendedDestinationTrack) >= lengthToBeReserved) {
                                 YardTracksOrganizer.Instance.ReserveSpace(intendedDestinationTrack, lengthToBeReserved, false);
                             } else {
-                                // not enough space to reserve; find a different track with enough space & update job data
-                                var replacementTrack = GetReplacementTrack(intendedDestinationTrack, lengthToBeReserved, random);
-                                if (replacementTrack == null) {
-                                    Debug.LogWarning($"[PersistentJobs] Can't find track with enough free space for Job[{job.ID}]. Skipping track reservation!");
-                                } else {
-                                    YardTracksOrganizer.Instance.ReserveSpace(replacementTrack, lengthToBeReserved, false);
+                                if (Main.Settings.DestinationTrackChange || (job.jobType == JobType.ShuntingUnload)) { 
+                                    // not enough space to reserve; find a different track with enough space & update job data
+                                    var replacementTrack = GetReplacementTrack(intendedDestinationTrack, lengthToBeReserved, random);
+                                    if (replacementTrack == null) {
+                                        Debug.LogWarning($"[PersistentJobs] Can't find track with enough free space for Job[{job.ID}]. Skipping track reservation!");
+                                    } else {
+                                        YardTracksOrganizer.Instance.ReserveSpace(replacementTrack, lengthToBeReserved, false);
 
-                                    // Query the cars from original shunting unload Job information to be used as additional information for subsequent track change
-                                    var intendedCarsOrNull = (staticJobDefinition as StaticShuntingUnloadJobDefinition)?.carsPerDestinationTrack[j].cars;
+                                        // Query the cars from original shunting unload Job information to be used as additional information for subsequent track change
+                                        var intendedCarsOrNull = (staticJobDefinition as StaticShuntingUnloadJobDefinition)?.carsPerDestinationTrack[j].cars;
 
-                                    ReplaceDestinationTrackInStaticJobDefinition(staticJobDefinition, intendedDestinationTrack, replacementTrack, intendedCarsOrNull);
+                                        ReplaceDestinationTrackInStaticJobDefinition(staticJobDefinition, intendedDestinationTrack, replacementTrack, intendedCarsOrNull);
 
-                                    // update reservation data
-                                    trackReservations.RemoveAt(j);
-                                    trackReservations.Insert(j, new TrackReservation(replacementTrack, lengthToBeReserved));
+                                        // update reservation data
+                                        trackReservations.RemoveAt(j);
+                                        trackReservations.Insert(j, new TrackReservation(replacementTrack, lengthToBeReserved));
 
-                                    didAnyTrackChange = true;
+                                        didAnyTrackChange = true;
+                                    }
                                 }
                             }
                         }

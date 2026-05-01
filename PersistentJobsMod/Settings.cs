@@ -7,6 +7,9 @@ namespace PersistentJobsMod {
 
         public bool PreventStartingShuntingJobForCarsOnWarehouseTrackMessageWasShown = false;
 
+        [Draw("Replace destination tracks if there is no space")]
+        public bool DestinationTrackChange = true;
+
         [Draw("Show track signs for all named tracks")]
         public bool GenerateTrackSigns = false;
 
