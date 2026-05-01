@@ -4,6 +4,7 @@ using DV.Utils;
 using HarmonyLib;
 using PersistentJobsMod.JobGenerators;
 using PersistentJobsMod.ModInteraction;
+using PersistentJobsMod.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,24 +85,21 @@ namespace PersistentJobsMod.HarmonyPatches.JobChainControllers {
         }
 
         private static JobChainController CreateSubsequentTransportJob(JobChainController __instance, StaticShuntingLoadJobDefinition shuntingLoadJobDefinition) {
-            var startingStation = SingletonBehaviour<LogicController>.Instance.YardIdToStationController[shuntingLoadJobDefinition.logicStation.ID];
-            var destStation = SingletonBehaviour<LogicController>.Instance.YardIdToStationController[shuntingLoadJobDefinition.chainData.chainDestinationYardId];
-            var startingTrack = shuntingLoadJobDefinition.destinationTrack;
             var trainCars = new List<TrainCar>(TrainCar.ExtractTrainCars(__instance.carsForJobChain));
             var rng = new System.Random(Environment.TickCount);
+            var startingStation = SingletonBehaviour<LogicController>.Instance.YardIdToStationController[shuntingLoadJobDefinition.logicStation.ID];
+            var destStation = SingletonBehaviour<LogicController>.Instance.YardIdToStationController[shuntingLoadJobDefinition.chainData.chainDestinationYardId];
+            var startingTrack = CarTrackAssignment.FindNearestNamedTrackOrNull(trainCars) ?? shuntingLoadJobDefinition.destinationTrack;
             var transportedCargoPerCar = trainCars.Select(tc => tc.logicCar.CurrentCargoTypeInCar).ToList();
             return TransportJobGenerator.TryGenerateJobChainController(startingStation, startingTrack, destStation, trainCars, transportedCargoPerCar, rng);
         }
 
         private static JobChainController CreateSubsequentShuntingUnloadJob(JobChainController __instance, StaticTransportJobDefinition transportJobDefinition) {
-            var startingStation = SingletonBehaviour<LogicController>.Instance.YardIdToStationController[transportJobDefinition.logicStation.ID];
-            var destinationStation = SingletonBehaviour<LogicController>.Instance.YardIdToStationController[transportJobDefinition.chainData.chainDestinationYardId];
-
-            var startingTrack = transportJobDefinition.destinationTrack;
-
             var trainCars = new List<TrainCar>(TrainCar.ExtractTrainCars(__instance.carsForJobChain));
             var rng = new System.Random(Environment.TickCount);
-
+            var startingStation = SingletonBehaviour<LogicController>.Instance.YardIdToStationController[transportJobDefinition.logicStation.ID];
+            var destinationStation = SingletonBehaviour<LogicController>.Instance.YardIdToStationController[transportJobDefinition.chainData.chainDestinationYardId];
+            var startingTrack = CarTrackAssignment.FindNearestNamedTrackOrNull(trainCars) ?? transportJobDefinition.destinationTrack;            
             return ShuntingUnloadJobGenerator.TryGenerateJobChainController(startingStation, startingTrack, destinationStation, trainCars, rng);
         }
 
