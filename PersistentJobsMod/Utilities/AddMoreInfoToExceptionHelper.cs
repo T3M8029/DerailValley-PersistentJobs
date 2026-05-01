@@ -1,14 +1,16 @@
-﻿using JetBrains.Annotations;
+﻿using DV.Common;
+using DV.UserManagement;
+using DV.UserManagement.Data;
+using DV.Utils;
+using JetBrains.Annotations;
 using MessageBox;
 using System;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
 using UnityEngine;
-using DV.Common;
-using DV.UserManagement;
-using DV.Utils;
-using DV.UserManagement.Data;
 
 namespace PersistentJobsMod.Utilities {
     public static class AddMoreInfoToExceptionHelper {
@@ -82,20 +84,28 @@ namespace PersistentJobsMod.Utilities {
                 newJsonFile?.CopyTo(Path.Combine(exceptionOutFolder, "afterEx_" + newJsonFile.Name));
 
                 var logFPath = Path.Combine(dataDir, "Player.log");
-                if (File.Exists(logFPath)) File.Copy(logFPath, Path.Combine(exceptionOutFolder, "Player.log"), overwrite: true);
+                var newLogPath = Path.Combine(exceptionOutFolder, "Player.log");
+                if (File.Exists(logFPath)) File.Copy(logFPath, newLogPath, overwrite: true);
+                if (File.Exists(newLogPath))
+                {
+                    var log = CleanLogFromUnityDebugNoise(File.ReadAllText(newLogPath, Encoding.UTF8));
+                    File.WriteAllText(newLogPath, log);
+                }
 
-                string readmeStr = ($"If you see this, please go make a bug report concerning this. \nThe preferred way is at \"https://github.com/Banjobeni/DerailValley-PersistentJobs/issues\". You should describe what you were doing in game at the moment the exception fired. \nDon´t forget to add this .zip file, it contains the logs and relevant saves! \n\n If you don´t know/want to interact with GitHub, you can mention this issue in the \"#mods-support-and-bugs\" chanel on the \"Altfuture\" discord server tagging \"@8029\" or \"@Banjobeni\" with the same info, whilst also including this file. \nThank you for this help in the developement of this mod. ");
+                string readmeStr = ($"If you see this, please go make a bug report concerning this as it helps enormously with the development of Persistent Jobs. Thank you in advance.\n\nThe best way is to create an issue on the Github repo at \"https://github.com/Banjobeni/DerailValley-PersistentJobs/issues\". You should include this .zip file which contains the relevant logs and saves and describe what you were doing in game at the moment the exception fired.\n\nAlternatively you can post the same info in the \"Altfuture\" discord server at \"https://discord.com/invite/altfuture\" under the \"#mods-support-and-bugs\" channel. Make sure you tag \"@8029\" or \"@Banjobeni\" in your post.");
                 File.WriteAllText(Path.Combine(exceptionOutFolder, "ReadME.txt"), readmeStr);
 
                 ZipFile.CreateFromDirectory(exceptionOutFolder, Path.ChangeExtension(exceptionOutFolder, ".zip"));
                 Directory.Delete(exceptionOutFolder, true);
 
-                PopupAPI.ShowOk($"Persistent Jobs mod encountered a critical failure. The mod will stay inactive until the game is restarted.\n\nSee {exceptionFileName} for details.", onClose: c => { PopupAPI.ShowOk($"The game should be restarted now, not doing so is going to result in problems (eg. cars and jobs disappearing). It might be beneficial to load an earlier save. \nIt would be appreciated if you reported this issue on the mod´s GitHub or the Altfuture discord server. A zipped folder containing the required info has been created at {exceptionOutFolder}"); });
+                PopupAPI.ShowOk($"Persistent Jobs mod encountered a critical failure. The mod will stay inactive until the game is restarted.\n\nSee {exceptionFileName} for details.", onClose: c => { PopupAPI.ShowOk($"The game should be restarted now, not doing so is going to result in problems (eg. cars and jobs disappearing). It might be beneficial to load an earlier save. \nIf you see this please go make a bug report concerning this. A zipped folder containing the required info has been created at {exceptionOutFolder}"); });
             }
             catch (Exception ex)
             {
                 Main._modEntry.Logger.LogException("Failed to generate bug report: ", ex);
             }
         }
+
+        public static string CleanLogFromUnityDebugNoise(string input) =>  Regex.Replace(input, @"\r?\n?\(Filename: .*? Line: \d+\)\r?\n?\r?\n?", "\n", RegexOptions.Compiled);
     }
 }
