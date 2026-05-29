@@ -29,7 +29,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
                 UnusedTrainCarDeleter __instance,
                 ref IEnumerator __result,
                 List<TrainCar> ___unusedTrainCarsMarkedForDelete) {
-            if (!Main._modEntry.Active) {
+            if (!Main._modEntry.Active || !MultiplayerShim.IsHost) {
                 return true;
             } else {
                 __result = TrainCarsCreateJobOrDeleteCheck(__instance, COROUTINE_INTERVAL, ___unusedTrainCarsMarkedForDelete);

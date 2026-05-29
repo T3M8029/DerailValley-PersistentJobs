@@ -11,7 +11,7 @@ namespace PersistentJobsMod.HarmonyPatches.CarSpawningJobGeneration {
         [HarmonyPatch(nameof(StationProceduralJobsController.TryToGenerateJobs))]
         [HarmonyPrefix]
         public static bool TryToGenerateJobs_Prefix(StationProceduralJobsController __instance, StationProceduralJobsRuleset ___generationRuleset, ref Coroutine ___generationCoro) {
-            if (!Main._modEntry.Active) {
+            if (!Main._modEntry.Active || !MultiplayerShim.IsHost) {
                 return true;
             }
 

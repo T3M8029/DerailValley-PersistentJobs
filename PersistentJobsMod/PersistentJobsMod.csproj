@@ -120,6 +120,7 @@
     <Compile Include="HarmonyPatches\Save\StartGameData_FromSaveGame_Patch.cs" />
     <Compile Include="HarmonyPatches\Sleeping\BedSleepingController_Patches.cs" />
     <Compile Include="HarmonyPatches\Trashcan\JobAbandoner_Patches.cs" />
+    <Compile Include="ModInteraction\MultiplayerShim.cs" />
     <Compile Include="ModInteraction\PaxJobsCompat.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Utilities\AdditionalInformationException.cs" />
