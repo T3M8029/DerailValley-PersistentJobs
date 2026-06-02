@@ -1,5 +1,7 @@
-﻿using HarmonyLib;
+﻿using DV.JObjectExtstensions;
+using HarmonyLib;
 using Newtonsoft.Json.Linq;
+using PersistentJobsMod.Optimization;
 using PersistentJobsMod.Persistence;
 using PersistentJobsMod.Utilities;
 using System;
@@ -89,6 +91,20 @@ namespace PersistentJobsMod.HarmonyPatches.Save
             {
                 Main._modEntry.Logger.Log($" CarsSaveManager_DeleteAllExistingCars_Patch.Postfix: Savegame data reset, possibly due to mod or game update. Resetting all jobs and stations.");
                 CarsSaveManager_Patches.ResetJobsAndCarsState();
+            }
+        }
+    }
+
+    [HarmonyPatch(typeof(CarsSaveManager), "GetCarsSaveData")]
+    public static class CarsSaveManager_GetCarsSaveData_Patch
+    {
+        public static void Postfix(ref JObject __result)
+        {
+            JArray carData = (JArray)__result["carsData"];
+            foreach (JObject carObj in FarCarOpt.SuspendedCarObjects.Values)
+            {
+                Main._modEntry.Logger.Log("adding" + carObj.ToString() + " to save data");
+                carData.Add(carObj);
             }
         }
     }

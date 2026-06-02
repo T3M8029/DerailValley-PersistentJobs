@@ -116,6 +116,7 @@ namespace PersistentJobsMod.ModInteraction
         private static FieldInfo _RouteTrackStationField;
         private static FieldInfo _PaxJGeneratorStContField;
         private static FieldInfo _PHJD_RouteTypeField;
+        private static FieldInfo _PHJD_CarsField;
         private static FieldInfo _StaticJobDefJobField;
         private static FieldInfo _InitialStopField;
         private static FieldInfo _BaseWageScale;
@@ -214,6 +215,7 @@ namespace PersistentJobsMod.ModInteraction
                 _RouteTrackStationField = CompatAccess.Field(_RouteTrack, "Station");
                 _PaxJGeneratorStContField = CompatAccess.Field(_PassengerJobGenerator, "Controller");
                 _PHJD_RouteTypeField = CompatAccess.Field(_PassengerHaulJobDefinition, "RouteType");
+                _PHJD_CarsField = CompatAccess.Field(_PassengerHaulJobDefinition, "_cars");
                 _StaticJobDefJobField = CompatAccess.Field(typeof(StaticJobDefinition), "<job>k__BackingField");
                 _InitialStopField = CompatAccess.Field(_PassengerJobData, "initialStop");
                 _BaseWageScale = CompatAccess.Field(_PassengerJobGenerator, "BASE_WAGE_SCALE");
@@ -458,6 +460,10 @@ namespace PersistentJobsMod.ModInteraction
 
             return _PassengerExpress;
         }
+
+        public static List<Car> GetCarsFromPaxJobDef(PassengerHaulJobDefinitionRef passengerHaulJobDefinition) => (List<Car>)_PHJD_CarsField.GetValue(passengerHaulJobDefinition.Value);
+
+        public static void SetCarsInPaxJobDef(PassengerHaulJobDefinitionRef passengerHaulJobDefinition, List<Car> cars) => _PHJD_CarsField.SetValue(passengerHaulJobDefinition.Value, cars);
 
         private static PassengerHaulJobDefinitionRef PopulateExpressJobExistingCars(JobChainController chainController, Station startStation, RouteTrackRef startTrack, RouteResultRef routeResult, List<Car> logicCars, StationsChainData chainData, float timeLimit, float initialPay) => new(_PopulateExpressJobExistingCars?.Invoke(null, new object[] { chainController, startStation, startTrack.Value, routeResult.Value, logicCars, chainData, timeLimit, initialPay }));
 

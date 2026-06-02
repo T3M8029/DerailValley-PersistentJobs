@@ -25,7 +25,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <LangVersion>9</LangVersion>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -34,7 +34,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <LangVersion>9</LangVersion>
+    <LangVersion>preview</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
@@ -62,6 +62,9 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="DV.UIFramework">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DV.OriginShiftInfo">
       <Private>False</Private>
     </Reference>
     <Reference Include="DV.UI">
@@ -99,6 +102,12 @@
     <Reference Include="UnityEngine.UI">
       <Private>False</Private>
     </Reference>
+    <Reference Include="Unity.Mathematics">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Unity.Transforms">
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityModManager">
       <Private>False</Private>
     </Reference>
@@ -115,12 +124,15 @@
     <Compile Include="HarmonyPatches\JobChainControllers\JobChainController_AddJobDefinitionToChain_Patch.cs" />
     <Compile Include="HarmonyPatches\JobChainControllers\StaticShuntingUnloadJobDefinition_Patch.cs" />
     <Compile Include="HarmonyPatches\JobChainControllers\StaticShuntingLoadJobDefinition_Patch.cs" />
+    <Compile Include="HarmonyPatches\Optimization\DebtSystemPatches.cs" />
+    <Compile Include="HarmonyPatches\Optimization\IdGenerator_Patches.cs" />
     <Compile Include="HarmonyPatches\Pausing\PauseMenuController_Patches.cs" />
     <Compile Include="HarmonyPatches\Save\SaveGameData_RemoveData_Patch.cs" />
     <Compile Include="HarmonyPatches\Save\StartGameData_FromSaveGame_Patch.cs" />
     <Compile Include="HarmonyPatches\Sleeping\BedSleepingController_Patches.cs" />
     <Compile Include="HarmonyPatches\Trashcan\JobAbandoner_Patches.cs" />
     <Compile Include="ModInteraction\PaxJobsCompat.cs" />
+    <Compile Include="Optimization\FarCarOpt.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Utilities\AdditionalInformationException.cs" />
     <Compile Include="Utilities\AddMoreInfoToExceptionHelper.cs" />
@@ -196,11 +208,13 @@
     <Publicize Include="Assembly-CSharp:UnusedTrainCarDeleter.unusedTrainCarsMarkedForDelete" />
     <Publicize Include="Assembly-CSharp:StationProceduralJobsController.generationCoro" />
     <Publicize Include="Assembly-CSharp:StationController.availableJobs" />
+    <Publicize Include="Assembly-CSharp:StationController.ExtractLogicTracks" />
     <Publicize Include="Assembly-CSharp:JobChainController.ReserveRequiredTracks" />
     <Publicize Include="Assembly-CSharp:JobChainController.jobChain" />
     <Publicize Include="Assembly-CSharp:JobChainController.jobDefToCurrentlyReservedTracks" />
     <Publicize Include="Assembly-CSharp:DV.Logic.Job.SequentialTasks.tasks" />
     <Publicize Include="Assembly-CSharp:StationController.stationRange" />
+    <Publicize Include="Assembly-CSharp:StationController.ExtractLogicTracks" />
     <Publicize Include="Assembly-CSharp:DV.Logic.Job.TransportTask.destinationTrack" />
     <Publicize Include="Assembly-CSharp:DV.Logic.Job.TransportTask.carsPerDestinationTrack" />
     <Publicize Include="Assembly-CSharp:TrainCar.carStateSave" />
@@ -208,12 +222,24 @@
     <Publicize Include="Assembly-CSharp:TrainCar.carDebtController" />
     <Publicize Include="Assembly-CSharp:TrainCar.CarDamage" />
     <Publicize Include="Assembly-CSharp:TrainCar.CargoDamage" />
+    <Publicize Include="Assembly-CSharp:TrainCar.carDebtController" />
     <Publicize Include="Assembly-CSharp:CarStateSave.debtTrackerCar" />
     <Publicize Include="Assembly-CSharp:TrainCarPlatesController.UpdateCarHealthData" />
     <Publicize Include="Assembly-CSharp:TrainCarPlatesController.UpdateCargoHealthData" />
     <Publicize Include="Assembly-CSharp:JobSaveManager.GetYardTrackWithId" />
     <Publicize Include="Assembly-CSharp:JobSaveManager.LoadJobChain" />
     <Publicize Include="Assembly-CSharp:DV.Logic.Job.TrackID.trackType" />
+    <Publicize Include="Assembly-CSharp:DV.Logic.Job.JobsManager.jobToJobCars" />
+    <Publicize Include="Assembly-CSharp:CarsSaveManager.InstantiateCarFromSavegame" />
+    <Publicize Include="Assembly-CSharp:CarsSaveManager.RestoreCarConnections" />
+    <Publicize Include="Assembly-CSharp:CarsSaveManager.IgnoreTrainStressForLoadedCarsUntilCouplingIsSettled" />
+    <Publicize Include="Assembly-CSharp:CarsSaveManager.SetBrakesOnSpawn" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.CarDebtController.trainCar" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.JobDebtTracker.carsDebtTrackers" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtComponent.type" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtComponent.startValue" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtComponent.snapshotValue" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtComponent.endValue" />
   </ItemGroup>
   <ItemGroup />
 </Project>

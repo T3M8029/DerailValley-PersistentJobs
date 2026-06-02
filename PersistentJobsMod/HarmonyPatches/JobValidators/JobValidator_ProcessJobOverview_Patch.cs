@@ -5,6 +5,7 @@ using HarmonyLib;
 using MessageBox;
 using PersistentJobsMod.Extensions;
 using PersistentJobsMod.ModInteraction;
+using PersistentJobsMod.Optimization;
 using PersistentJobsMod.Utilities;
 using System;
 using System.Collections;
@@ -38,6 +39,16 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
                             innerTask => AreTaskCarsInRange(innerTask, stationRange)))) {
                     job.ExpireJob();
                     return true;
+                }
+
+                var jobChainController = stationController.ProceduralJobsController.GetCurrentJobChains().FirstOrDefault(jcc => jcc.currentJobInChain == job);
+                if (FarCarOpt.SuspendedCarGUIDToJobChainController.ContainsValue(jobChainController ??= new JobChainController(new()))) //the new is just a fallthrough case instead of null
+                {
+                    Debug.LogWarning("[PersistentJobsMod] The cars for the job are still suspended!");
+                    var foo = jobChainController?.carsForJobChain.Select(c => c.carGuid).Select(g => FarCarOpt.ResumeCar(g)).ToHashSet();
+                    if (!foo.Any(f => !f)) return true;
+                    __instance.StartCoroutine(HandleJobAcceptnceFaliure(___bookletPrinter, false));
+                    return false;
                 }
 
                 // reserve space for job and for shunting (un)load jobs, require cars to not already be on the warehouse track

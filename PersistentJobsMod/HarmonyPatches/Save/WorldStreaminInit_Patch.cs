@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using MessageBox;
+using PersistentJobsMod.Optimization;
 using PersistentJobsMod.Persistence;
 using System.Collections;
 using System.Collections.Generic;
@@ -12,6 +13,7 @@ namespace PersistentJobsMod.HarmonyPatches.Save {
         public static void LoadingRoutine_Prefix() {
             Main._modEntry.Logger.Log("WorldStreamingInit.LoadingRoutine prefix: Cleared station spawn flags");
             StationIdCarSpawningPersistence.Instance.ClearStationsSpawnedCarsFlagForAllStations();
+            FarCarOpt.ClearRecords();
         }
 
         [HarmonyPatch(typeof(WorldStreamingInit), "LoadingRoutine")]

@@ -1,10 +1,12 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using CommandTerminal;
 using DV.Logic.Job;
 using DV.ThingTypes;
 using DV.Utils;
 using PersistentJobsMod.HarmonyPatches.Distance;
 using PersistentJobsMod.HarmonyPatches.JobGeneration;
+using PersistentJobsMod.Optimization;
 using PersistentJobsMod.Persistence;
 using UnityEngine;
 using Random = System.Random;
@@ -122,6 +124,67 @@ namespace PersistentJobsMod {
                         break;
                 }
             }
+        }
+
+        [RegisterCommand("PJ.SuspendCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
+        public static void SuspendCar(CommandArg[] args)
+        {
+            var trainCarID = args[0].String;
+            var trainCar = CarSpawner.Instance.AllCars.FirstOrDefault(tc => tc.ID == trainCarID);
+            if (trainCar == null)
+            {
+                Debug.Log($"Could not find train car with ID {trainCarID}");
+                return;
+            }
+
+            FarCarOpt.SuspendCar(trainCar);
+        }
+
+        [RegisterCommand("PJ.SuspendCostistOfCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
+        public static void SuspendCostistOfCar(CommandArg[] args)
+        {
+            var trainCarID = args[0].String;
+            if (trainCarID is "all" or "*")
+            {
+                FarCarOpt.SuspendCars(CarSpawner.Instance.AllCars);
+                return;
+            }
+
+            var trainCar = CarSpawner.Instance.AllCars.FirstOrDefault(tc => tc.ID == trainCarID);
+            if (trainCar == null)
+            {
+                Debug.Log($"Could not find train car with ID {trainCarID}");
+                return;
+            }
+
+            FarCarOpt.SuspendCars(trainCar.trainset.cars);
+        }
+
+        [RegisterCommand("PJ.ResumeCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
+        public static void ResumeCar(CommandArg[] args)
+        {
+            var trainCarID = args[0].String;
+            FarCarOpt.SuspendedCarIDToCarGUID.TryGetValue(trainCarID, out string carGUID);
+            if (carGUID == null)
+            {
+                Debug.Log($"No suspended train car with ID {trainCarID}");
+                return;
+            }
+
+            FarCarOpt.ResumeCar(carGUID);
+        }
+
+        [RegisterCommand("PJ.ResumeCarsInStation", Help = "", MinArgCount = 1, MaxArgCount = 1)]
+        public static void ResumeCarsInStation(CommandArg[] args)
+        {
+            SingletonBehaviour<CoroutineManager>.Instance.Run(FarCarOpt.ResumeCarsInStation(args[0].String));
+        }
+
+        [RegisterCommand("PJ.GetSuspendedCars", MinArgCount = 0, MaxArgCount = 0)]
+        public static void ListSuspendedCars(CommandArg[] args)
+        {
+            var suspendedCars = FarCarOpt.SuspendedCarIDToCarGUID.Keys;
+            Debug.Log(string.Join(", ", suspendedCars));
         }
     }
 }

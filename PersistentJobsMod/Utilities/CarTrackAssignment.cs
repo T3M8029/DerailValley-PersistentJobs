@@ -20,6 +20,14 @@ namespace PersistentJobsMod.Utilities {
             return trainCars;
         }
 
+        public static JobChainController GetControllerOfCarOrNull(Car logicCar)
+        {
+            Job jobOfCar = SingletonBehaviour<JobsManager>.Instance.GetJobOfCar(logicCar, false);
+            if (jobOfCar == null) return null;
+            List<JobChainController> currentJobChains = StationController.GetStationByYardID(jobOfCar.chainData.chainOriginYardId).ProceduralJobsController.GetCurrentJobChains();
+            return currentJobChains?.FirstOrDefault(jcc => jcc.carsForJobChain.Contains(logicCar));
+        }
+
         public static Track FindNearestNamedTrackOrNull(IReadOnlyList<TrainCar> trainCars) {
             var medianCarCount = trainCars.Count / 2;
 

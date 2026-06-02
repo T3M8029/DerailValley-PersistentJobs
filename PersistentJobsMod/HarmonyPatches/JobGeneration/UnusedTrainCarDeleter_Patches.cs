@@ -46,6 +46,8 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
                 try {
                     if (PlayerManager.PlayerTransform != null && !FastTravelController.IsFastTravelling) {
                         ReassignRegularTrainCarsAndDeleteNonPlayerSpawnedCars(unusedTrainCarDeleter, ___unusedTrainCarsMarkedForDelete);
+
+                        SingletonBehaviour<CoroutineManager>.Instance.Run(PersistentJobsMod.Optimization.FarCarOpt.SuspendCarsCoro());
                     }
                 } catch (Exception e) {
                     Main.HandleUnhandledException(e, nameof(UnusedTrainCarDeleter_Patches) + "." + nameof(TrainCarsCreateJobOrDeleteCheck));
