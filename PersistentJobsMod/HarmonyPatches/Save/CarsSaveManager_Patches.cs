@@ -103,7 +103,6 @@ namespace PersistentJobsMod.HarmonyPatches.Save
             JArray carData = (JArray)__result["carsData"];
             foreach (JObject carObj in FarCarOpt.SuspendedCarObjects.Values)
             {
-                Main._modEntry.Logger.Log("adding" + carObj.ToString() + " to save data");
                 carData.Add(carObj);
             }
         }

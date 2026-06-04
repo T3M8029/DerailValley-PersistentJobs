@@ -45,8 +45,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
                 if (FarCarOpt.SuspendedCarGUIDToJobChainController.ContainsValue(jobChainController ??= new JobChainController(new()))) //the new is just a fallthrough case instead of null
                 {
                     Debug.LogWarning("[PersistentJobsMod] The cars for the job are still suspended!");
-                    var foo = jobChainController?.carsForJobChain.Select(c => c.carGuid).Select(g => FarCarOpt.ResumeCar(g)).ToHashSet();
-                    if (!foo.Any(f => !f)) return true;
+                    if (FarCarOpt.ResumeCars(jobChainController?.carsForJobChain.Select(c => c.carGuid).ToList())) return true;
                     __instance.StartCoroutine(HandleJobAcceptnceFaliure(___bookletPrinter, false));
                     return false;
                 }

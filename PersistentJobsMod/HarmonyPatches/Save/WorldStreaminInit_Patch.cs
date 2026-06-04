@@ -28,6 +28,7 @@ namespace PersistentJobsMod.HarmonyPatches.Save {
                 PopupAPI.ShowOk(popup);
             }
             stringsToShow.Clear();
+            yield break;
         }
 
         public static void ShowPopupOnPlayerSpawn(string message)

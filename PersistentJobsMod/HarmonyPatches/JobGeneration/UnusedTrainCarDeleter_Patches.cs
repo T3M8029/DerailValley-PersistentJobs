@@ -12,6 +12,7 @@ using PersistentJobsMod.Extensions;
 using PersistentJobsMod.JobGenerators;
 using PersistentJobsMod.Model;
 using PersistentJobsMod.ModInteraction;
+using PersistentJobsMod.Optimization;
 using PersistentJobsMod.Utilities;
 using UnityEngine;
 using Random = System.Random;
@@ -47,7 +48,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
                     if (PlayerManager.PlayerTransform != null && !FastTravelController.IsFastTravelling) {
                         ReassignRegularTrainCarsAndDeleteNonPlayerSpawnedCars(unusedTrainCarDeleter, ___unusedTrainCarsMarkedForDelete);
 
-                        SingletonBehaviour<CoroutineManager>.Instance.Run(PersistentJobsMod.Optimization.FarCarOpt.SuspendCarsCoro());
+                        if (!FarCarOpt.CoroRunning) FarCarOpt.SuspendCarsCoro();
                     }
                 } catch (Exception e) {
                     Main.HandleUnhandledException(e, nameof(UnusedTrainCarDeleter_Patches) + "." + nameof(TrainCarsCreateJobOrDeleteCheck));

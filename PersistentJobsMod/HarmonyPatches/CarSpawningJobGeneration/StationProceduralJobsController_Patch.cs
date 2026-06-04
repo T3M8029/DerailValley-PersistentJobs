@@ -18,7 +18,7 @@ namespace PersistentJobsMod.HarmonyPatches.CarSpawningJobGeneration {
             }
 
             try {
-                SingletonBehaviour<CoroutineManager>.Instance.Run(FarCarOpt.ResumeCarsInStation(__instance.stationController.logicStation.ID));
+                FarCarOpt.ResumeCarsInStation(__instance.stationController.logicStation.ID);
 
                 if (StationIdCarSpawningPersistence.Instance.GetHasStationSpawnedCarsFlag(__instance.stationController)) {
                     Main._modEntry.Logger.Log($"Station {__instance.stationController.logicStation.ID} has already spawned cars, skipping jobs-with-cars generation");

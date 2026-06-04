@@ -15,7 +15,7 @@ namespace PersistentJobsMod {
     public static class Console {
         [RegisterCommand("PJ.ClearStationSpawnFlag", Help = "PersistentJobsMod: Clear the flag for a station such that it may spawn cars again. Use 'all' or '*' to clear all flags.", MinArgCount = 1, MaxArgCount = 1)]
         public static void ClearStationSpawnFlag(CommandArg[] args) {
-            var stationId = args[0].String;
+            var stationId = args[0].String.Trim().ToUpper();
 
             if (stationId.ToLowerInvariant() == "all" || stationId == "*") {
                 StationIdCarSpawningPersistence.Instance.ClearStationsSpawnedCarsFlagForAllStations();
@@ -47,7 +47,7 @@ namespace PersistentJobsMod {
 
         [RegisterCommand("PJ.RegenerateJobsForConsistOfCar", Help = "PersistentJobsMod: Regenerate jobs for the consist of a specific car immediately. To identify the car, use the ID on the car plate.", MinArgCount = 1, MaxArgCount = 1)]
         public static void RegenerateJobsForConsistOfCar(CommandArg[] args) {
-            var trainCarID = args[0].String;
+            var trainCarID = args[0].String.Trim().ToUpper();
             var trainCar = CarSpawner.Instance.AllCars.FirstOrDefault(tc => tc.ID == trainCarID);
             if (trainCar == null) {
                 Debug.Log($"Could not find train car with ID {trainCarID}");
@@ -79,7 +79,7 @@ namespace PersistentJobsMod {
             if (args.Length == 0) {
                 ExpireAvailableJobsInAllStations();
             } else {
-                var stationID = args[0].String;
+                var stationID = args[0].String.Trim().ToUpper();
                 var stationController = StationController.allStations.FirstOrDefault(s => s.logicStation.ID == stationID);
                 if (stationController == null) {
                     Debug.Log("Could not find station with that ID");
@@ -103,7 +103,7 @@ namespace PersistentJobsMod {
 
         [RegisterCommand("PJ.ExpireJobForConsistOfCar", Help = "PersistentJobsMod: Expire the job of the consist of a specific car immediately. To identify the car, use the ID on the car plate.", MinArgCount = 1, MaxArgCount = 1)]
         public static void ExpireJobForConsistOfCar(CommandArg[] args) {
-            var trainCarID = args[0].String;
+            var trainCarID = args[0].String.Trim().ToUpper();
             var trainCar = CarSpawner.Instance.AllCars.FirstOrDefault(tc => tc.ID == trainCarID);
             if (trainCar == null) {
                 Debug.Log($"Could not find train car with ID {trainCarID}");
@@ -129,7 +129,7 @@ namespace PersistentJobsMod {
         [RegisterCommand("PJ.SuspendCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
         public static void SuspendCar(CommandArg[] args)
         {
-            var trainCarID = args[0].String;
+            var trainCarID = args[0].String.Trim().ToUpper();
             var trainCar = CarSpawner.Instance.AllCars.FirstOrDefault(tc => tc.ID == trainCarID);
             if (trainCar == null)
             {
@@ -143,10 +143,10 @@ namespace PersistentJobsMod {
         [RegisterCommand("PJ.SuspendCostistOfCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
         public static void SuspendCostistOfCar(CommandArg[] args)
         {
-            var trainCarID = args[0].String;
+            var trainCarID = args[0].String.Trim().ToUpper();
             if (trainCarID is "all" or "*")
             {
-                FarCarOpt.SuspendCars(CarSpawner.Instance.AllCars);
+                FarCarOpt.SuspendCars(CarSpawner.Instance.AllCars.ToList());
                 return;
             }
 
@@ -157,13 +157,13 @@ namespace PersistentJobsMod {
                 return;
             }
 
-            FarCarOpt.SuspendCars(trainCar.trainset.cars);
+            FarCarOpt.SuspendCars(trainCar.trainset.cars.ToList());
         }
 
         [RegisterCommand("PJ.ResumeCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
         public static void ResumeCar(CommandArg[] args)
         {
-            var trainCarID = args[0].String;
+            var trainCarID = args[0].String.Trim().ToUpper();
             FarCarOpt.SuspendedCarIDToCarGUID.TryGetValue(trainCarID, out string carGUID);
             if (carGUID == null)
             {
@@ -171,13 +171,13 @@ namespace PersistentJobsMod {
                 return;
             }
 
-            FarCarOpt.ResumeCar(carGUID);
+            FarCarOpt.ResumeCar(carGUID, out _);
         }
 
         [RegisterCommand("PJ.ResumeCarsInStation", Help = "", MinArgCount = 1, MaxArgCount = 1)]
         public static void ResumeCarsInStation(CommandArg[] args)
         {
-            SingletonBehaviour<CoroutineManager>.Instance.Run(FarCarOpt.ResumeCarsInStation(args[0].String));
+            FarCarOpt.ResumeCarsInStation(args[0].String.Trim().ToUpper());
         }
 
         [RegisterCommand("PJ.GetSuspendedCars", MinArgCount = 0, MaxArgCount = 0)]

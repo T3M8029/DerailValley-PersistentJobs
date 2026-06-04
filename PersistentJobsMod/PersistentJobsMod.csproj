@@ -25,7 +25,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -34,7 +34,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="0Harmony">
@@ -44,6 +44,9 @@
       <Private>False</Private>
     </Reference>
     <Reference Include="CommandTerminal">
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="DV.BrakeSystem">
       <Private>False</Private>
     </Reference>
     <Reference Include="DV.Common">
@@ -126,6 +129,7 @@
     <Compile Include="HarmonyPatches\JobChainControllers\StaticShuntingLoadJobDefinition_Patch.cs" />
     <Compile Include="HarmonyPatches\Optimization\DebtSystemPatches.cs" />
     <Compile Include="HarmonyPatches\Optimization\IdGenerator_Patches.cs" />
+    <Compile Include="HarmonyPatches\Pausing\FastTravelController_Patches.cs" />
     <Compile Include="HarmonyPatches\Pausing\PauseMenuController_Patches.cs" />
     <Compile Include="HarmonyPatches\Save\SaveGameData_RemoveData_Patch.cs" />
     <Compile Include="HarmonyPatches\Save\StartGameData_FromSaveGame_Patch.cs" />

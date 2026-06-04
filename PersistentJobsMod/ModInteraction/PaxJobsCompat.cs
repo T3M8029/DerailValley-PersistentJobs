@@ -407,7 +407,7 @@ namespace PersistentJobsMod.ModInteraction
             return routeTrack;
         }
 
-        private static List<Track> AllPaxTracksForStationData(string yardId) => ((IEnumerable<Track>)_AllTracksProperty.GetValue(GetStationData(yardId).Value)).ToList();
+        public static List<Track> AllPaxTracksForStationData(string yardId) => ((IEnumerable<Track>)_AllTracksProperty.GetValue(GetStationData(yardId).Value)).ToList();
 
         private static string YardIdFromPaxStation(IPassDestinationRef passStationData) => (string)_PaxStYardIdProperty.GetValue(passStationData.Value);
 
