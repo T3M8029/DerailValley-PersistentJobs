@@ -29,6 +29,8 @@ using RouteTrackRef = PersistentJobsMod.Utilities.ReflectionUtilities.Foreign<Pe
 using RouteTypeRef = PersistentJobsMod.Utilities.ReflectionUtilities.Foreign<PersistentJobsMod.ModInteraction.PaxJobsCompat.Tags.RouteType>;
 using PlatformControllerRef = PersistentJobsMod.Utilities.ReflectionUtilities.Foreign<PersistentJobsMod.ModInteraction.PaxJobsCompat.Tags.PlatformController>;
 using PassengerJobDataRef = PersistentJobsMod.Utilities.ReflectionUtilities.Foreign<PersistentJobsMod.ModInteraction.PaxJobsCompat.Tags.PassengerJobData>;
+using DV.Simulation.Cars;
+using PersistentJobsMod.HarmonyPatches.Optimization;
 #endregion
 
 namespace PersistentJobsMod.ModInteraction
@@ -259,6 +261,8 @@ namespace PersistentJobsMod.ModInteraction
                 PatchPrefix(_OnLastJobInChainCompletedOverride, typeof(PaxJobsCompat), nameof(OnLastJobInChainCompletedOverride_Prefix));
 
                 PatchReverse(_OnLastJobInChainCompletedBase, typeof(PaxJobsCompat), nameof(OnLastJobInChainCompletedReverse));
+
+                //PatchPrefix(CompatAccess.Method(typeof(SimController), "OnLogicCarInitialized"), typeof(SimControllerPatches), nameof(SimControllerPatches.OnLogicCarInitialized_Prefix));
 
                 //removing a PaxJobs patch that deletes cars on job abandonment
                 Main.Harmony.Unpatch(CompatAccess.Method(typeof(JobChainController), "OnAnyJobFromChainAbandoned"), HarmonyPatchType.Prefix, Main.PaxJobs.Info.Id);

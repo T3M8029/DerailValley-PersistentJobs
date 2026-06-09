@@ -27,6 +27,7 @@ namespace PersistentJobsMod.Utilities {
             var cargoDamageModelOrNull = GetOrCreateCargoDamageModelOrNull(trainCar, trainPlatesController);
 
             var carDebtController = trainCar.carDebtController;
+            carDebtController.ignoreCarDamageDebt = false;
             carDebtController.SetDebtTracker(carDamageModel, cargoDamageModelOrNull);
 
             carStateSave.Initialize(carDamageModel, cargoDamageModelOrNull);
