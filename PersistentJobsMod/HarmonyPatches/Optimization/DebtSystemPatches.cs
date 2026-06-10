@@ -1,7 +1,10 @@
 ﻿using DV.Damage;
+using DV.Logic.Job;
 using DV.ServicePenalty;
+using DV.Utils;
 using HarmonyLib;
 using PersistentJobsMod.Optimization;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace PersistentJobsMod.HarmonyPatches.Optimization
@@ -72,6 +75,46 @@ namespace PersistentJobsMod.HarmonyPatches.Optimization
                 return false;
             }
             else return true;
+        }
+    }
+
+    [HarmonyPatch(typeof(JobDebtController), nameof(JobDebtController.RegisterGeneratedJob))]
+    public static class JobDebtController_Patch
+    {
+        public static void Prefix(Job job, List<Car> cars, JobDebtController __instance)
+        {
+            SingletonBehaviour<CareerManagerDebtController>.Instance.RefreshExistingDebtsState();
+            var debtHandler = __instance.existingJoblessCarDebts;
+            debtHandler.UpdateDebtState();
+            var joblessCarDebtTrackers = debtHandler.joblessCarsTrackers;
+            var carsToStageDebtsFor = joblessCarDebtTrackers.Select(jdt => jdt.GetDebtData()).Select(cdd => cdd.id).ToList().Intersect(cars.Select(c => c.ID)).ToList();
+            foreach (var carID in carsToStageDebtsFor) foreach (var debt in joblessCarDebtTrackers.Where(jdt => jdt.GetDebtData().id == carID).ToList()) StageJoblessCarDebtAndFreeze(debt);
+        }
+
+        public static void StageJoblessCarDebtAndFreeze(DebtTrackerCar debtTrackerCar)
+        {
+            var controller = SingletonBehaviour<JobDebtController>.Instance;
+
+            if (!controller.existingJoblessCarDebts.RemoveJoblessCarTracker(debtTrackerCar))
+            {
+                UnityEngine.Debug.LogError("Unexpected error: DebtTrackerCar" + debtTrackerCar.GetDebtData().id + " is not part of the existingJoblessCarDebts!");
+                return;
+            }
+
+            if (controller.existingJoblessCarDebts.NumberOfDebts == 0) SingletonBehaviour<CareerManagerDebtController>.Instance.UnregisterDebt(controller.existingJoblessCarDebts);
+
+            debtTrackerCar.UpdateDebtValues();
+            CarDebtData carDebtData = debtTrackerCar.GetDebtData();
+            if (carDebtData.GetTotalPriceOfDebt(false, false) > 0f)
+            {
+                carDebtData = CarDebtData.FilterOutUnchangedComponents(carDebtData, false);
+                if (carDebtData == null) return;
+
+                controller.deletedJoblessCarDebts.AddJoblessCarDebt(CarDebtData.LoadCarDebtFromSaveData(carDebtData.GetCarDebtSaveData()));
+
+                if (controller.deletedJoblessCarDebts.NumberOfDebts == 1) SingletonBehaviour<CareerManagerDebtController>.Instance.RegisterDebt(controller.deletedJoblessCarDebts);
+            }
+            debtTrackerCar.UpdateStartValueToEndValue();
         }
     }
 }

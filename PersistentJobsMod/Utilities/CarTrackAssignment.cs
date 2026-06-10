@@ -1,5 +1,6 @@
 using DV.Logic.Job;
 using DV.Utils;
+using PersistentJobsMod.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,16 +9,27 @@ using UnityEngine;
 namespace PersistentJobsMod.Utilities {
     public static class CarTrackAssignment {
 
-        public static List<TrainCar> TrainCarsByGuid(IEnumerable<string> carGuid)
+        public static IEnumerable<TrainCar> TrainCarsByGuid(IEnumerable<string> carGuid)
         {
-            List<TrainCar> trainCars = new();
+            HashSet<TrainCar> trainCars = new();
+            foreach (var car in carGuid) trainCars.Add(SingletonBehaviour<TrainCarRegistry>.Instance.GetTrainCarByCarGuid(car) ?? throw new NullReferenceException($"Car GUID {car} does not correspond to any existing car"));
+            return trainCars.WhereNotNull();
+        }
 
-            foreach (var car in carGuid)
-            {
-                trainCars.Add(SingletonBehaviour<TrainCarRegistry>.Instance.GetTrainCarByCarGuid(car) ?? throw new NullReferenceException($"Car GUID {car} does not correspond to any existing car"));
-            }
+        public static IEnumerable<TrainCar> TrainCarsByID(IEnumerable<string> carIDs)
+        {
+            HashSet<TrainCar> trainCars = new();
+            var allCars = CarSpawner.Instance.AllCars;
+            foreach (var carID in carIDs) trainCars.Add(allCars.FirstOrDefault(tc => tc.ID == carID));
+            return trainCars.WhereNotNull();
+        }
 
-            return trainCars;
+        public static IEnumerable<Car> CarsByID(IEnumerable<string> carIDs)
+        {
+            HashSet<TrainCar> trainCars = new();
+            var allCars = CarSpawner.Instance.AllCars;
+            foreach (var carID in carIDs) trainCars.Add(allCars.FirstOrDefault(tc => tc.ID == carID));
+            return trainCars.WhereNotNull().Select(tc => tc.logicCar);
         }
 
         public static JobChainController GetControllerOfCarOrNull(Car logicCar)

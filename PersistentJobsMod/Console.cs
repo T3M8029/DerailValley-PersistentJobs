@@ -8,6 +8,7 @@ using PersistentJobsMod.HarmonyPatches.Distance;
 using PersistentJobsMod.HarmonyPatches.JobGeneration;
 using PersistentJobsMod.Optimization;
 using PersistentJobsMod.Persistence;
+using PersistentJobsMod.Utilities;
 using UnityEngine;
 using Random = System.Random;
 
@@ -48,7 +49,7 @@ namespace PersistentJobsMod {
         [RegisterCommand("PJ.RegenerateJobsForConsistOfCar", Help = "PersistentJobsMod: Regenerate jobs for the consist of a specific car immediately. To identify the car, use the ID on the car plate.", MinArgCount = 1, MaxArgCount = 1)]
         public static void RegenerateJobsForConsistOfCar(CommandArg[] args) {
             var trainCarID = args[0].String.Trim().ToUpper();
-            var trainCar = CarSpawner.Instance.AllCars.FirstOrDefault(tc => tc.ID == trainCarID);
+            var trainCar = CarTrackAssignment.TrainCarsByID([trainCarID]).FirstOrDefault();
             if (trainCar == null) {
                 Debug.Log($"Could not find train car with ID {trainCarID}");
                 return;
@@ -104,7 +105,7 @@ namespace PersistentJobsMod {
         [RegisterCommand("PJ.ExpireJobForConsistOfCar", Help = "PersistentJobsMod: Expire the job of the consist of a specific car immediately. To identify the car, use the ID on the car plate.", MinArgCount = 1, MaxArgCount = 1)]
         public static void ExpireJobForConsistOfCar(CommandArg[] args) {
             var trainCarID = args[0].String.Trim().ToUpper();
-            var trainCar = CarSpawner.Instance.AllCars.FirstOrDefault(tc => tc.ID == trainCarID);
+            var trainCar = CarTrackAssignment.TrainCarsByID([trainCarID]).FirstOrDefault();
             if (trainCar == null) {
                 Debug.Log($"Could not find train car with ID {trainCarID}");
                 return;
@@ -150,7 +151,7 @@ namespace PersistentJobsMod {
                 return;
             }
 
-            var trainCar = CarSpawner.Instance.AllCars.FirstOrDefault(tc => tc.ID == trainCarID);
+            var trainCar = CarTrackAssignment.TrainCarsByID([trainCarID]).FirstOrDefault();
             if (trainCar == null)
             {
                 Debug.Log($"Could not find train car with ID {trainCarID}");

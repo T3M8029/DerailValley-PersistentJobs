@@ -404,7 +404,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
             return null;
         }
 
-        private static IEnumerator HandleJobAcceptnceFaliure(PrinterController printerController, bool shuntingJobOnWarehouseTrack) 
+        public static IEnumerator HandleJobAcceptnceFaliure(PrinterController printerController, bool shuntingJobOnWarehouseTrack) 
         {
             printerController.PlayErrorSound();
             if (shuntingJobOnWarehouseTrack) {

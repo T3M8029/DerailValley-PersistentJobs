@@ -125,8 +125,11 @@
     <Compile Include="CarSpawningJobGenerators\EmptyHaulJobWithCarsGenerator.cs" />
     <Compile Include="HarmonyPatches\Console\Console_Patches.cs" />
     <Compile Include="HarmonyPatches\JobChainControllers\JobChainController_AddJobDefinitionToChain_Patch.cs" />
+    <Compile Include="HarmonyPatches\JobChainControllers\JobsManager_Patches.cs" />
+    <Compile Include="HarmonyPatches\JobChainControllers\Job_Patches.cs" />
     <Compile Include="HarmonyPatches\JobChainControllers\StaticShuntingUnloadJobDefinition_Patch.cs" />
     <Compile Include="HarmonyPatches\JobChainControllers\StaticShuntingLoadJobDefinition_Patch.cs" />
+    <Compile Include="HarmonyPatches\JobValidators\JobValidator_ValidateJob_Patch.cs" />
     <Compile Include="HarmonyPatches\Optimization\DebtSystemPatches.cs" />
     <Compile Include="HarmonyPatches\Optimization\IdGenerator_Patches.cs" />
     <Compile Include="HarmonyPatches\Optimization\SimControllerPatches.cs" />
@@ -240,17 +243,18 @@
     <Publicize Include="Assembly-CSharp:CarsSaveManager.IgnoreTrainStressForLoadedCarsUntilCouplingIsSettled" />
     <Publicize Include="Assembly-CSharp:CarsSaveManager.SetBrakesOnSpawn" />
     <Publicize Include="Assembly-CSharp:DV.ServicePenalty.CarDebtController.trainCar" />
-	<Publicize Include="Assembly-CSharp:DV.ServicePenalty.CarDebtController.ignoreCarDamageDebt" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.CarDebtController.ignoreCarDamageDebt" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.CareerManagerDebtController.currentNonZeroPricedDebts" />
     <Publicize Include="Assembly-CSharp:DV.ServicePenalty.JobDebtTracker.carsDebtTrackers" />
     <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtComponent.type" />
     <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtComponent.startValue" />
     <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtComponent.snapshotValue" />
     <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtComponent.endValue" />
-	<Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtTrackerCar.carDmg" />
-	<Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtTrackerCar.cargoDmg" />
-	<Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtTrackerCar.debtData" />
-	<Publicize Include="Assembly-CSharp:DV.Simulation.Cars.SimController.train" />
-	<Publicize Include="Assembly-CSharp:DV.Simulation.Cars.SimController.OnLogicCarInitialized" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtTrackerCar.carDmg" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtTrackerCar.cargoDmg" />
+    <Publicize Include="Assembly-CSharp:DV.ServicePenalty.DebtTrackerCar.debtData" />
+    <Publicize Include="Assembly-CSharp:DV.Simulation.Cars.SimController.train" />
+    <Publicize Include="Assembly-CSharp:DV.Simulation.Cars.SimController.OnLogicCarInitialized" />
   </ItemGroup>
   <ItemGroup />
 </Project>
