@@ -134,6 +134,7 @@
     <Compile Include="HarmonyPatches\Optimization\IdGenerator_Patches.cs" />
     <Compile Include="HarmonyPatches\Optimization\SimControllerPatches.cs" />
     <Compile Include="HarmonyPatches\Pausing\FastTravelController_Patches.cs" />
+    <Compile Include="HarmonyPatches\Pausing\LoadingScreenManager_Patches.cs" />
     <Compile Include="HarmonyPatches\Pausing\PauseMenuController_Patches.cs" />
     <Compile Include="HarmonyPatches\Save\SaveGameData_RemoveData_Patch.cs" />
     <Compile Include="HarmonyPatches\Save\StartGameData_FromSaveGame_Patch.cs" />

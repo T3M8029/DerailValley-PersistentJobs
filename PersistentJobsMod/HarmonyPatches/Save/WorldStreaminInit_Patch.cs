@@ -14,6 +14,7 @@ namespace PersistentJobsMod.HarmonyPatches.Save {
             Main._modEntry.Logger.Log("WorldStreamingInit.LoadingRoutine prefix: Cleared station spawn flags");
             StationIdCarSpawningPersistence.Instance.ClearStationsSpawnedCarsFlagForAllStations();
             FarCarOpt.ClearRecords();
+            WorldStreamingInit.LoadingFinished += FarCarOpt.SuspendCarsCoro;
         }
 
         [HarmonyPatch(typeof(WorldStreamingInit), "LoadingRoutine")]

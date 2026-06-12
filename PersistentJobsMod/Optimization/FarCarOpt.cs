@@ -18,6 +18,7 @@ namespace PersistentJobsMod.Optimization
     public static class FarCarOpt
     {
         private static RailTrack[] AllTracks;
+        public static int SuspendIteration;
 
         public static TrainCar CurrentTrainCarToSuspend;
         public static string CurrentCarIDToResume;
@@ -39,6 +40,7 @@ namespace PersistentJobsMod.Optimization
                 if (trainCar is null) return;
                 if (!trainCar.isEligibleForSleep) return;
                 if (trainCar.logicCar is null) return;
+                var st = Stopwatch.StartNew();
                 Main.Pause = true;
 
                 if (AllTracks == null || AllTracks.Length == 0 || AllTracks.Any(rt => rt is null)) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
@@ -96,7 +98,8 @@ namespace PersistentJobsMod.Optimization
                 SingletonBehaviour<CarSpawner>.Instance.DeleteCar(trainCar);
                 SingletonBehaviour<UnusedTrainCarDeleter>.Instance.ClearInvalidCarReferencesAfterManualDelete();
 
-                Main._modEntry.Logger.Log($"Suspended car {carID} (carGUID: {carGUID})");
+                st.Stop();
+                Main._modEntry.Logger.Log($"Suspended car {carID} (carGUID: {carGUID}) in {st.Elapsed}");
             }
             catch (Exception ex)
             {
@@ -248,8 +251,8 @@ namespace PersistentJobsMod.Optimization
             var frozenCarDebtSer = frozenCarDebtData.GetCarDebtSaveData();
             bool changed = !(oldCarDebtSer.ToString() == frozenCarDebtSer.ToString());
 
-            Main._modEntry.Logger.Log($"old d: ({((oldTracker as SimulatedCarDebtTracker) != null ? "simTracker" : "carTracker")}) \n{oldCarDebtSer} \nfrozen d: {frozenCarDebtSer}");
-            Main._modEntry.Logger.Log($"eaqual: {!changed}");
+            //Main._modEntry.Logger.Log($"old d: ({((oldTracker as SimulatedCarDebtTracker) != null ? "simTracker" : "carTracker")}) \n{oldCarDebtSer} \nfrozen d: {frozenCarDebtSer}");
+            //Main._modEntry.Logger.Log($"eaqual: {!changed}");
 
             var oldComponents = oldData.GetTrackedDebts();
             var newComponents = newData.GetTrackedDebts();
@@ -272,7 +275,7 @@ namespace PersistentJobsMod.Optimization
                         }
                     }
                 }
-                Main._modEntry.Logger.Log($"After replace d: ({((oldTracker as SimulatedCarDebtTracker) != null ? "simTracker" : "carTracker")}) \n{newTracker.GetDebtData().GetCarDebtSaveData()}");
+                //Main._modEntry.Logger.Log($"After replace d: ({((oldTracker as SimulatedCarDebtTracker) != null ? "simTracker" : "carTracker")}) \n{newTracker.GetDebtData().GetCarDebtSaveData()}");
             }
         }
 
@@ -324,6 +327,7 @@ namespace PersistentJobsMod.Optimization
             if (trainCars is null || !trainCars.Any()) return;
             if (!WorldStreamingInit.IsLoaded) return;
 
+            var st = Stopwatch.StartNew();
             if (AllTracks == null || AllTracks.Length == 0 || AllTracks.Any(rt => rt is null)) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
             var viableTrainCars = (trainCars.Where(tc => !(tc is null || tc.uniqueCar || tc.IsLoco || tc.IsCaboose || tc.preventDelete))).ToList();
             var trainCarObjects = viableTrainCars.Select(tc => CarsSaveManager.GetCarSaveData(tc, AllTracks)).ToList();
@@ -334,21 +338,29 @@ namespace PersistentJobsMod.Optimization
             }
 
             SingletonBehaviour<UnusedTrainCarDeleter>.Instance.ClearInvalidCarReferencesAfterManualDelete();
+            st.Stop();
+            Main._modEntry.Logger.Log($"Suspending {trainCars.Count} cars took {st.Elapsed}");
         }
 
         public static void SuspendCarsCoro()
         {
+            SuspendIteration++;
+            if ((SuspendIteration % 3 > 0)) return;
+            if (!Main.Settings.SuspendFarAwayCars) return;
             if (!WorldStreamingInit.IsLoaded) return;
+            CoroRunning = true;
+
+            var st = Stopwatch.StartNew();
+
             AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
 
             var viableSCs = StationController.allStations.Where(sc => !sc.stationRange.IsPlayerInJobGenerationZone(sc.stationRange.PlayerSqrDistanceFromStationCenter * 2)).ToList();
             if (viableSCs.Any(sc => sc?.gameObject == null)) return;
-
-            CoroRunning = true;
             var cars = new HashSet<TrainCar>();
 
             foreach (var sc in viableSCs)
             {
+                var scst = Stopwatch.StartNew();
                 Main._modEntry.Logger.Log("Suspending cars in " + sc.stationInfo.YardID);
                 var stationTracks = sc.ExtractLogicTracks(sc.AllStationTracks);
                 if (Main.PaxJobsPresent && PaxJobsCompat.IsPassengerStation(sc.stationInfo.YardID)) stationTracks.AddRange(PaxJobsCompat.AllPaxTracksForStationData(sc.stationInfo.YardID));
@@ -370,12 +382,16 @@ namespace PersistentJobsMod.Optimization
                         cars.UnionWith(partially.LastOrDefault()?.TrainCar().trainset.cars);
                     }
                 }
+                scst.Stop();
+                Main._modEntry.Logger.Log($"Gather took {scst.Elapsed}");
 
                 if (cars.Any()) SuspendCars([.. cars]);
                 cars.Clear();
             }
 
             CoroRunning = false;
+            st.Stop();
+            Main._modEntry.Logger.Log($"SuspendCarsCoro took {st.Elapsed} to run");
         }
 
         public static void ResumeCarsInStation(string stationID)
@@ -392,7 +408,7 @@ namespace PersistentJobsMod.Optimization
             if (stationID is "ALL" or "*") carGUIDS = StationIDtoSuspendedCarGUID.Values.SelectMany(x => x).ToList();
 
             //SingletonBehaviour<CoroutineManager>.Instance.Run(CarsSaveManager.IgnoreTrainStressForLoadedCarsUntilCouplingIsSettled());
-            ResumeCars(carGUIDS.ToList());
+            ResumeCars(carGUIDS?.ToList());
 
             st.Stop();
             UnityEngine.Debug.Log("[PersistentJobsMod] Successfully resumed cars in " + stationID + " in " + st.Elapsed);
@@ -450,6 +466,7 @@ namespace PersistentJobsMod.Optimization
             SuspendedCarGUIDToJobChainController.Clear();
             SuspendedCarGUIDToDebtTracker.Clear();
             StationIDtoSuspendedCarGUID.Clear();
+            SuspendIteration = 0;
         }
     }
 }

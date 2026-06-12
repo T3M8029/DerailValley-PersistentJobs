@@ -19,6 +19,9 @@ namespace PersistentJobsMod {
         [Draw("Intercompatibility with Passenger Jobs mod (toggle mod off/on for setting change to take effect)")]
         public bool PaxJobsCompatibility = true;
 
+        [Draw("Suspend cars in far away stations in order to improve performance")]
+        public bool SuspendFarAwayCars = true;
+
         public override void Save(UnityModManager.ModEntry modEntry) {
             Save(this, modEntry);
         }
