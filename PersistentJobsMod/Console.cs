@@ -147,7 +147,7 @@ namespace PersistentJobsMod {
             var trainCarID = args[0].String.Trim().ToUpper();
             if (trainCarID is "all" or "*")
             {
-                FarCarOpt.SuspendCars(CarSpawner.Instance.AllCars.ToList());
+                SingletonBehaviour<CoroutineManager>.Instance.Run(FarCarOpt.SuspendCars(CarSpawner.Instance.AllCars.ToList()));
                 return;
             }
 
@@ -158,7 +158,7 @@ namespace PersistentJobsMod {
                 return;
             }
 
-            FarCarOpt.SuspendCars(trainCar.trainset.cars.ToList());
+            SingletonBehaviour<CoroutineManager>.Instance.Run(FarCarOpt.SuspendCars(trainCar.trainset.cars.ToList()));
         }
 
         [RegisterCommand("PJ.ResumeCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]

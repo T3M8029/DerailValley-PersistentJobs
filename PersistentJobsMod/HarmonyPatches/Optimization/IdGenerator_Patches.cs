@@ -17,6 +17,8 @@ namespace PersistentJobsMod.HarmonyPatches.Optimization
         [HarmonyPrefix]
         public static bool UnregisterCarId_Prefix(string carId)
         {
+            //sometimes coroutines line up just right and CurrentTrainCarToSuspend still has a value when a loco is getting rightfully deleted
+            if (carId.StartsWith("L")) return true;
             if (carId == FarCarOpt.CurrentTrainCarToSuspend?.ID) return false;
             else return true;
         }

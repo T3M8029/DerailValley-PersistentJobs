@@ -1,10 +1,11 @@
-﻿using System;
+﻿using DV.Utils;
+using HarmonyLib;
+using PersistentJobsMod.Optimization;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using HarmonyLib;
-using PersistentJobsMod.Optimization;
 
 namespace PersistentJobsMod.HarmonyPatches.Pausing
 {
@@ -23,8 +24,8 @@ namespace PersistentJobsMod.HarmonyPatches.Pausing
         public static void FinishLoadingPatch()
         {
             Main.Pause = false;
-            FarCarOpt.SuspendIteration = 0;
-            FarCarOpt.SuspendCarsCoro();
+            FarCarOpt.SuspendIteration = 2;
+            FarCarOpt.RunSuspendCars(true);
         }
     }
 }

@@ -12,17 +12,25 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using UnityEngine;
 
 namespace PersistentJobsMod.Optimization
 {
     public static class FarCarOpt
     {
-        private static RailTrack[] AllTracks;
+        public static RailTrack[] AllTracks;
         public static int SuspendIteration;
 
         public static TrainCar CurrentTrainCarToSuspend;
         public static string CurrentCarIDToResume;
-        public static bool CoroRunning;
+        public static bool SuspendCoroRunning;
+        public static bool ResumeCoroRunning;
+        public static Stopwatch ResumeStopwatch;
+
+        private static (Coroutine, List<StationController>) SuspendCoroutine;
+        private static (Coroutine, List<string>, string) ResumeCoroutine;
+
+        private static readonly Queue<(List<string>, string)> PendingResumes = new();
 
         //key is carGUID (not car ID!), value is the save format for a car
         public static readonly Dictionary<string, JObject> SuspendedCarObjects = [];
@@ -31,6 +39,9 @@ namespace PersistentJobsMod.Optimization
         public static readonly Dictionary<string, JobChainController> SuspendedCarGUIDToJobChainController = [];
         public static readonly Dictionary<string, (DebtTrackerBase, CarDebtData)> SuspendedCarGUIDToDebtTracker = [];
         public static readonly Dictionary<string, List<string>> StationIDtoSuspendedCarGUID = [];
+
+        public static event Action<string> ResumeCompleted;
+        public static event Action SuspendCompleted;
 
         public static void SuspendCar(TrainCar trainCar, JObject carObj = null)
         {
@@ -43,7 +54,7 @@ namespace PersistentJobsMod.Optimization
                 var st = Stopwatch.StartNew();
                 Main.Pause = true;
 
-                if (AllTracks == null || AllTracks.Length == 0 || AllTracks.Any(rt => rt is null)) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
+                if (AllTracks == null || AllTracks.Length == 0) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
                 var allTracks = AllTracks;
 
                 PlayerSpawnedCarUtilities.ConvertPlayerSpawnedTrainCar(trainCar);
@@ -124,7 +135,7 @@ namespace PersistentJobsMod.Optimization
                 Stopwatch st = Stopwatch.StartNew();
                 Main.Pause = true;
 
-                if (AllTracks == null || AllTracks.Length == 0 || AllTracks.Any(rt => rt is null)) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
+                if (AllTracks == null || AllTracks.Length == 0) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
                 var allTracks = AllTracks;
 
                 string oldCarID = SuspendedCarGUIDToCarID[carGUID];
@@ -322,129 +333,210 @@ namespace PersistentJobsMod.Optimization
             }
         }
 
-        public static void SuspendCars(List<TrainCar> trainCars)
+        public static IEnumerator SuspendCars(List<TrainCar> trainCars)
         {
-            if (trainCars is null || !trainCars.Any()) return;
-            if (!WorldStreamingInit.IsLoaded) return;
+            if (trainCars is null || !trainCars.Any()) yield break;
+            if (!WorldStreamingInit.IsLoaded) yield break;
 
             var st = Stopwatch.StartNew();
-            if (AllTracks == null || AllTracks.Length == 0 || AllTracks.Any(rt => rt is null)) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
-            var viableTrainCars = (trainCars.Where(tc => !(tc is null || tc.uniqueCar || tc.IsLoco || tc.IsCaboose || tc.preventDelete))).ToList();
+            var fst = Stopwatch.StartNew();
+
+            if (AllTracks == null || AllTracks.Length == 0) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
+            var viableTrainCars = (trainCars.Where(tc => !(tc is null || tc.uniqueCar || tc.IsLoco || tc.IsCaboose || tc.preventDelete || tc.logicCar is null))).ToList();
             var trainCarObjects = viableTrainCars.Select(tc => CarsSaveManager.GetCarSaveData(tc, AllTracks)).ToList();
 
             for (int i = 0; i < viableTrainCars.Count; i++)
             {
                 SuspendCar(viableTrainCars[i], trainCarObjects[i]);
+
+                if (fst.ElapsedMilliseconds > 10)
+                {
+                    yield return null;
+                    fst.Restart();
+                }
             }
 
             SingletonBehaviour<UnusedTrainCarDeleter>.Instance.ClearInvalidCarReferencesAfterManualDelete();
             st.Stop();
-            Main._modEntry.Logger.Log($"Suspending {trainCars.Count} cars took {st.Elapsed}");
+            Main._modEntry.Logger.Log($"Suspending {viableTrainCars.Count} cars took {st.Elapsed}");
+            yield break;
         }
 
-        public static void SuspendCarsCoro()
+        public static bool RunSuspendCars(bool immediately = false, List<StationController> where = null)
         {
             SuspendIteration++;
-            if ((SuspendIteration % 3 > 0)) return;
-            if (!Main.Settings.SuspendFarAwayCars) return;
-            if (!WorldStreamingInit.IsLoaded) return;
-            CoroRunning = true;
+            if (!immediately && (SuspendIteration % 2 > 0)) return false;
+            if (!Main.Settings.SuspendFarAwayCars) return false;
 
-            var st = Stopwatch.StartNew();
+            if (AllTracks == null || AllTracks.Length == 0 || AllTracks.Any(rt => rt is null)) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
+            where ??= StationController.allStations.Where(sc => !sc.stationRange.IsPlayerInJobGenerationZone(sc.stationRange.PlayerSqrDistanceFromStationCenter * 2)).ToList();
+            if (where.Any(sc => sc?.gameObject == null)) return false;
 
-            AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
-
-            var viableSCs = StationController.allStations.Where(sc => !sc.stationRange.IsPlayerInJobGenerationZone(sc.stationRange.PlayerSqrDistanceFromStationCenter * 2)).ToList();
-            if (viableSCs.Any(sc => sc?.gameObject == null)) return;
-            var cars = new HashSet<TrainCar>();
-
-            foreach (var sc in viableSCs)
+            if (SuspendCoroRunning && SuspendCoroutine.Item1 != null)
             {
-                var scst = Stopwatch.StartNew();
-                Main._modEntry.Logger.Log("Suspending cars in " + sc.stationInfo.YardID);
-                var stationTracks = sc.ExtractLogicTracks(sc.AllStationTracks);
-                if (Main.PaxJobsPresent && PaxJobsCompat.IsPassengerStation(sc.stationInfo.YardID)) stationTracks.AddRange(PaxJobsCompat.AllPaxTracksForStationData(sc.stationInfo.YardID));
-
-                foreach (var track in stationTracks)
-                {
-                    var fully = track.GetCarsFullyOnTrack();
-                    var partially = track.GetCarsPartiallyOnTrack();
-                    if (fully != null && fully.Any())
-                    {
-                        cars.UnionWith(fully.Select(c => c.TrainCar()));
-                        cars.UnionWith(fully.FirstOrDefault()?.TrainCar().trainset.cars);
-                        cars.UnionWith(fully.LastOrDefault()?.TrainCar().trainset.cars);
-                    }
-                    if (partially != null && partially.Any())
-                    {
-                        cars.UnionWith(partially.Select(c => c.TrainCar()));
-                        cars.UnionWith(partially.FirstOrDefault()?.TrainCar().trainset.cars);
-                        cars.UnionWith(partially.LastOrDefault()?.TrainCar().trainset.cars);
-                    }
-                }
-                scst.Stop();
-                Main._modEntry.Logger.Log($"Gather took {scst.Elapsed}");
-
-                if (cars.Any()) SuspendCars([.. cars]);
-                cars.Clear();
+                if (where.All(sc => SuspendCoroutine.Item2.Contains(sc))) return false;
+                Main._modEntry.Logger.Error($"SuspendCarsCoro already running on {string.Join(", ", SuspendCoroutine.Item2.Select(sc => sc.stationInfo.YardID))} stopped for another is launching");
+                SingletonBehaviour<CoroutineManager>.Instance.Stop(SuspendCoroutine.Item1);
             }
 
-            CoroRunning = false;
-            st.Stop();
-            Main._modEntry.Logger.Log($"SuspendCarsCoro took {st.Elapsed} to run");
+            SuspendCoroRunning = true;
+            SuspendCoroutine = (SingletonBehaviour<CoroutineManager>.Instance.Run(new ExceptionCatchingCoroutineIterator(SuspendCarsCoro(where), nameof(FarCarOpt) + "." + nameof(SuspendCarsCoro), new StackTrace(true))), where);
+
+            return true;
         }
 
-        public static void ResumeCarsInStation(string stationID)
+        private static IEnumerator<(string NextStageName, object Result)> SuspendCarsCoro(IEnumerable<StationController> viableSCs)
         {
-            if (stationID is null || stationID == string.Empty) return;
-            if (!WorldStreamingInit.IsLoaded) return;
+            Main._modEntry.Logger.Log(nameof(SuspendCarsCoro));
+            while (!WorldStreamingInit.IsLoaded) yield return ("waiting for WorldStreamingInit.IsLoaded", null);
+            while (ResumeCoroRunning) yield return ("waiting for car resuming to finish", null);
+            yield return ("safety wait", WaitFor.SecondsRealtime(0.5f));
+
+            var st = Stopwatch.StartNew();
+            var fst = Stopwatch.StartNew();
+            var cars = new HashSet<TrainCar>();
+            try
+            {
+                foreach (var sc in viableSCs)
+                {
+                    var scst = Stopwatch.StartNew();
+                    Main._modEntry.Logger.Log("Suspending cars in " + sc.stationInfo.YardID);
+                    var stationTracks = sc.ExtractLogicTracks(sc.AllStationTracks);
+                    if (Main.PaxJobsPresent && PaxJobsCompat.IsPassengerStation(sc.stationInfo.YardID)) stationTracks.AddRange(PaxJobsCompat.AllPaxTracksForStationData(sc.stationInfo.YardID));
+
+                    foreach (var track in stationTracks)
+                    {
+                        var fully = track.GetCarsFullyOnTrack();
+                        var partially = track.GetCarsPartiallyOnTrack();
+                        if (fully != null && fully.Any())
+                        {
+                            cars.UnionWith(fully.Select(c => c.TrainCar()));
+                            cars.UnionWith(fully.FirstOrDefault()?.TrainCar().trainset.cars);
+                            cars.UnionWith(fully.LastOrDefault()?.TrainCar().trainset.cars);
+                        }
+                        if (partially != null && partially.Any())
+                        {
+                            cars.UnionWith(partially.Select(c => c.TrainCar()));
+                            cars.UnionWith(partially.FirstOrDefault()?.TrainCar().trainset.cars);
+                            cars.UnionWith(partially.LastOrDefault()?.TrainCar().trainset.cars);
+                        }
+                    }
+                    cars.RemoveWhere(c => c.logicCar?.ID is null);
+                    scst.Stop();
+                    Main._modEntry.Logger.Log($"Gather took {scst.Elapsed}");
+
+                    if (fst.ElapsedMilliseconds > 3)
+                    {
+                        yield return ("frame time elapsed", null);
+                        fst.Restart();
+                    }
+
+                    if (cars.Any()) yield return ("actually suspending cars", SuspendCars([.. cars]));
+                    cars.Clear();
+                    yield return ("done - resetting", null);
+                }
+            }
+            finally
+            {
+                SuspendCoroRunning = false;
+                SuspendCompleted?.Invoke();
+                st.Stop();
+                Main._modEntry.Logger.Log($"SuspendCarsCoro took {st.Elapsed} to run");
+            }
+
+            yield break;
+        }
+
+        public static bool ResumeCarsInStation(string stationID)
+        {
+            if (stationID is null || stationID == string.Empty) return false;
+            if (!WorldStreamingInit.IsLoaded) return false;
 
             stationID = stationID.Trim().ToUpper();
 
             UnityEngine.Debug.Log("[PersistentJobsMod] Resuming cars in " + stationID);
-            Stopwatch st = Stopwatch.StartNew();
 
             StationIDtoSuspendedCarGUID.TryGetValue(stationID, out var carGUIDS);
             if (stationID is "ALL" or "*") carGUIDS = StationIDtoSuspendedCarGUID.Values.SelectMany(x => x).ToList();
+            if (carGUIDS is null || !carGUIDS.Any()) return false;
 
             //SingletonBehaviour<CoroutineManager>.Instance.Run(CarsSaveManager.IgnoreTrainStressForLoadedCarsUntilCouplingIsSettled());
-            ResumeCars(carGUIDS?.ToList());
-
-            st.Stop();
-            UnityEngine.Debug.Log("[PersistentJobsMod] Successfully resumed cars in " + stationID + " in " + st.Elapsed);
+            if (!RunResumeCars(carGUIDS.ToList(), stationID))
+            {
+                UnityEngine.Debug.LogWarning($"Car resuming in {stationID} failed");
+                if (Debugger.IsAttached) Debugger.Break();
+                return false;
+            }
+            return true;
         }
 
-        public static bool ResumeCars(List<string> guids)
+        public static bool RunResumeCars(List<string> guids, string location)
+        {
+            if (ResumeCoroRunning)
+            {
+                PendingResumes.Enqueue((guids, location));
+                return false;
+            }
+
+            ResumeCoroRunning = true;
+            ResumeStopwatch = Stopwatch.StartNew();
+            ResumeCoroutine = (SingletonBehaviour<CoroutineManager>.Instance.Run(new ExceptionCatchingCoroutineIterator(ResumeCarsCoro(guids, location), nameof(FarCarOpt) + "." + nameof(ResumeCarsCoro), new StackTrace(true))), guids, location);
+
+            return true;
+        }
+
+        private static IEnumerator<(string NextStageName, object Result)> ResumeCarsCoro(List<string> guids, string location)
         {
             List<JObject> succesfullCars = [];
             if (guids is not null && guids.Any())
             {
+                var fst = Stopwatch.StartNew();
                 TrainStress.globalIgnoreStressCalculation = true;
                 try
                 {
                     foreach (var guid in guids)
                     {
+                        if (ResumeStopwatch.Elapsed.TotalMinutes > 4) throw new TimeoutException($"{nameof(ResumeCarsCoro)} has ran for too long!");
+
                         if (!ResumeCar(guid, out JObject carData))
                         {
                             TrainStress.globalIgnoreStressCalculation = false;
                             throw new Exception("Failed to resume car with guid " + guid);
                         }
                         else succesfullCars.Add(carData);
+
+                        if (fst.ElapsedMilliseconds > 10)
+                        {
+                            yield return ("frame time elapsed", null);
+                            fst.Restart();
+                        }
                     }
+
                     foreach (var carData in succesfullCars) CarsSaveManager.RestoreCarConnections(carData);
-                    return true;
+
+                    UnityEngine.Debug.Log($"[PersistentJobsMod] Successfully resumed {succesfullCars.Count} cars {(location.Length > 0 ? ("in " + location) : "")} in {ResumeStopwatch.Elapsed}");
+                    ResumeStopwatch.Reset();
                 }
                 finally
                 {
                     TrainStress.globalIgnoreStressCalculation = false;
+                    ResumeStopwatch.Stop();
+                    ResumeCoroRunning = false;
+                    ResumeCompleted?.Invoke(location);
+
+                    if (PendingResumes.Count > 0)
+                    {
+                        var next = PendingResumes.Dequeue();
+                        RunResumeCars(next.Item1, next.Item2);
+                    }
                 }
             }
-            return false;
+            yield break;
         }
 
         public static IEnumerator AfterSuspend()
         {
-            yield return WaitFor.SecondsRealtime(0.05f);
+            yield return WaitFor.SecondsRealtime(0.005f);
             CurrentTrainCarToSuspend = null;
             Main.Pause = false;
             yield break;
@@ -452,7 +544,7 @@ namespace PersistentJobsMod.Optimization
 
         public static IEnumerator AfterRessume()
         {
-            yield return WaitFor.SecondsRealtime(0.05f);
+            yield return WaitFor.SecondsRealtime(0.005f);
             CurrentCarIDToResume = null;
             Main.Pause = false;
             yield break;
@@ -467,6 +559,7 @@ namespace PersistentJobsMod.Optimization
             SuspendedCarGUIDToDebtTracker.Clear();
             StationIDtoSuspendedCarGUID.Clear();
             SuspendIteration = 0;
+            AllTracks = null;
         }
     }
 }

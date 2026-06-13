@@ -41,18 +41,18 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
         private static IEnumerator TrainCarsCreateJobOrDeleteCheck(UnusedTrainCarDeleter unusedTrainCarDeleter, float interval, List<TrainCar> ___unusedTrainCarsMarkedForDelete) {
             for (; ; ) {
                 if (Main.Stop) yield break;
-                if (Main.Pause) yield return null;
+                while (Main.Pause) yield return null;
                 yield return WaitFor.SecondsRealtime(interval);
 
                 try {
                     if (PlayerManager.PlayerTransform != null && !FastTravelController.IsFastTravelling) {
                         ReassignRegularTrainCarsAndDeleteNonPlayerSpawnedCars(unusedTrainCarDeleter, ___unusedTrainCarsMarkedForDelete);
-
-                        if (!FarCarOpt.CoroRunning) FarCarOpt.SuspendCarsCoro();
                     }
                 } catch (Exception e) {
                     Main.HandleUnhandledException(e, nameof(UnusedTrainCarDeleter_Patches) + "." + nameof(TrainCarsCreateJobOrDeleteCheck));
                 }
+
+                FarCarOpt.RunSuspendCars();
             }
             // ReSharper disable once IteratorNeverReturns
         }

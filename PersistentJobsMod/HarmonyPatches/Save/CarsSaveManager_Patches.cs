@@ -1,4 +1,6 @@
 ﻿using DV.JObjectExtstensions;
+using DV.Logic.Job;
+using DV.Utils;
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
 using PersistentJobsMod.Optimization;
@@ -105,6 +107,23 @@ namespace PersistentJobsMod.HarmonyPatches.Save
             {
                 carData.Add(carObj);
             }
+        }
+    }
+
+    [HarmonyPatch(typeof(CarsSaveManager), "InstantiateCarFromSavegame")]
+    public static class CarsSaveManager_InstantiateCarFromSavegame
+    {
+        public static bool Prefix(JObject carData, RailTrack[] tracks)
+        {
+            if (tracks == null || tracks.Length == 0) tracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
+
+            if (SingletonBehaviour<IdGenerator>.Instance.carGuidToCar.ContainsKey(carData.GetString("id")))
+            {
+                UnityEngine.Debug.LogError($"Car with ID {carData.GetString("id")} already present, skipping entry");
+                return false;
+            }
+
+            return true;
         }
     }
 }

@@ -23,13 +23,13 @@ namespace PersistentJobsMod.HarmonyPatches.Save
             }
         }
 
-        [HarmonyPatch("LoadingNonBlockingCoro")]
+        /*[HarmonyPatch("LoadingNonBlockingCoro")]
         [HarmonyPostfix]
         public static IEnumerator LoadingNonBlockingCoro_Postfix(IEnumerator __result)
         {
             while (__result.MoveNext()) yield return __result.Current;
 
-            if (!FarCarOpt.CoroRunning) PersistentJobsMod.Optimization.FarCarOpt.SuspendCarsCoro();
-        }
+            FarCarOpt.RunSuspendCars();
+        }*/
     }
 }

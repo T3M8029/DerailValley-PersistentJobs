@@ -1,24 +1,48 @@
-﻿using System;
-using System.Collections;
-using DV.Logic.Job;
+﻿using DV.Logic.Job;
 using DV.ThingTypes;
-using DV.Utils;
-using System.Collections.Generic;
 using DV.ThingTypes.TransitionHelpers;
+using DV.Utils;
 using HarmonyLib;
 using PersistentJobsMod.Extensions;
+using PersistentJobsMod.ModInteraction;
+using PersistentJobsMod.Optimization;
 using PersistentJobsMod.Utilities;
+using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Random = System.Random;
-using PersistentJobsMod.ModInteraction;
 
 namespace PersistentJobsMod.CarSpawningJobGenerators {
     public static class CarSpawningJobGenerator {
         public static IEnumerator GenerateProceduralJobsCoroutine(StationProceduralJobsController instance, StationProceduralJobsRuleset stationProceduralJobsRuleset) {
-            return new ExceptionCatchingCoroutineIterator(GenerateProceduralJobsCoroutineCore(instance, stationProceduralJobsRuleset), nameof(CarSpawningJobGenerator) + "." + nameof(GenerateProceduralJobsCoroutine));
+            return new ExceptionCatchingCoroutineIterator(GenerateProceduralJobsCoroutineCore(instance, stationProceduralJobsRuleset), nameof(CarSpawningJobGenerator) + "." + nameof(GenerateProceduralJobsCoroutine), new System.Diagnostics.StackTrace(true));
         }
 
-        private static IEnumerator<(string NextStageName, object Result)> GenerateProceduralJobsCoroutineCore(StationProceduralJobsController instance, StationProceduralJobsRuleset stationProceduralJobsRuleset) {
+        private static IEnumerator<(string NextStageName, object Result)> GenerateProceduralJobsCoroutineCore(StationProceduralJobsController instance, StationProceduralJobsRuleset stationProceduralJobsRuleset)
+        {
+            bool stationDoneResuming = false;
+            void OnResumeCompleted(string id)
+            {
+                if (id == instance.stationController.logicStation.ID) stationDoneResuming = true;
+            }
+
+            FarCarOpt.ResumeCompleted += OnResumeCompleted;
+            try
+            {
+                if (!FarCarOpt.ResumeCarsInStation(instance.stationController.logicStation.ID))
+                {
+                    Main._modEntry.Logger.Log($"");
+                    stationDoneResuming = true;
+                }
+                yield return ("waiting for car resume", new WaitUntil(() => stationDoneResuming));
+            }
+            finally
+            {
+                FarCarOpt.ResumeCompleted -= OnResumeCompleted;
+            }            
+            yield return ("safety wait", WaitFor.SecondsRealtime(0.5f));
+
             var alreadyPresentJobsCount = instance.stationController.logicStation.availableJobs.Count;
             var maxGeneratableJobsNum = stationProceduralJobsRuleset.jobsCapacity - alreadyPresentJobsCount;
             if (Main.PaxJobsPresent && PaxJobsCompat.IsPassengerStation(instance.stationController.stationInfo.YardID)) maxGeneratableJobsNum += 6;
@@ -55,6 +79,12 @@ namespace PersistentJobsMod.CarSpawningJobGenerators {
             }
 
             Main._modEntry.Logger.Log($"{instance.stationController.stationInfo.YardID} job generation ended. {instance.stationController.logicStation.availableJobs.Count - alreadyPresentJobsCount} jobs were generated with {generateJobsAttempts} job generation attempts");
+            
+            if (Main.PaxJobsPresent && PaxJobsCompat.AllPaxStations().Contains(instance.stationController))
+            {
+                PaxJobsCompat.OverrideSpawnFlagForPaxJ = true;
+                PaxJobsCompat.PaxJobsOrigGenJobsInStation(instance.stationController.stationInfo.YardID);
+            }
 
             instance.generationCoro = null;
         }

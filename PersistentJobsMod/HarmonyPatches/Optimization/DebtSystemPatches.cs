@@ -54,7 +54,6 @@ namespace PersistentJobsMod.HarmonyPatches.Optimization
     {
         public static bool Prefix(CarDamageModel carDmg, CargoDamageModel cargoDmg, CarDebtController __instance)
         {
-            Main._modEntry.Logger.Log("CarDebtController_SetDebtTracker_Patch");
             return Foo(carDmg, cargoDmg, __instance);
         }
 

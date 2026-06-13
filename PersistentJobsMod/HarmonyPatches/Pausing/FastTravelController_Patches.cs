@@ -15,7 +15,7 @@ namespace PersistentJobsMod.HarmonyPatches.Pausing
             if (marker != null && marker.GetType() == typeof(StationFastTravelDestination))
             {
                 var foo = marker as StationFastTravelDestination;
-                if (foo != null)
+                if (foo != null && FarCarOpt.ResumeStopwatch != null && !FarCarOpt.ResumeStopwatch.IsRunning)
                 {
                     FarCarOpt.ResumeCarsInStation(foo.StationController.stationInfo.YardID);
                 }
