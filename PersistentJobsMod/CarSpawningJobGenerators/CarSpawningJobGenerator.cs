@@ -21,6 +21,8 @@ namespace PersistentJobsMod.CarSpawningJobGenerators {
 
         private static IEnumerator<(string NextStageName, object Result)> GenerateProceduralJobsCoroutineCore(StationProceduralJobsController instance, StationProceduralJobsRuleset stationProceduralJobsRuleset)
         {
+            while (FarCarOpt.ResumeCoroRunning) yield return ("resume already running", null);
+
             bool stationDoneResuming = false;
             void OnResumeCompleted(string id)
             {
@@ -32,7 +34,7 @@ namespace PersistentJobsMod.CarSpawningJobGenerators {
             {
                 if (!FarCarOpt.ResumeCarsInStation(instance.stationController.logicStation.ID))
                 {
-                    Main._modEntry.Logger.Log($"");
+                    Main._modEntry.Logger.Log($"failiure or not resumed anything");
                     stationDoneResuming = true;
                 }
                 yield return ("waiting for car resume", new WaitUntil(() => stationDoneResuming));

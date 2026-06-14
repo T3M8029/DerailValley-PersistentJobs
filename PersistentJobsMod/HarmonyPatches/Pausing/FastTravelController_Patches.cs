@@ -11,15 +11,6 @@ namespace PersistentJobsMod.HarmonyPatches.Pausing
         public static void Prefix(FastTravelDestination marker)
         {
             Main.Pause = true;
-
-            if (marker != null && marker.GetType() == typeof(StationFastTravelDestination))
-            {
-                var foo = marker as StationFastTravelDestination;
-                if (foo != null && FarCarOpt.ResumeStopwatch != null && !FarCarOpt.ResumeStopwatch.IsRunning)
-                {
-                    FarCarOpt.ResumeCarsInStation(foo.StationController.stationInfo.YardID);
-                }
-            }
         }
 
         public static IEnumerator Postfix(IEnumerator __result)

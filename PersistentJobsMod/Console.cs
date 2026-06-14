@@ -138,7 +138,7 @@ namespace PersistentJobsMod {
                 return;
             }
 
-            FarCarOpt.SuspendCar(trainCar);
+            if (!FarCarOpt.SuspendCar(trainCar)) Debug.Log($"Problem suspending train car with ID {trainCarID}");
         }
 
         [RegisterCommand("PJ.SuspendCostistOfCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
@@ -147,7 +147,7 @@ namespace PersistentJobsMod {
             var trainCarID = args[0].String.Trim().ToUpper();
             if (trainCarID is "all" or "*")
             {
-                SingletonBehaviour<CoroutineManager>.Instance.Run(FarCarOpt.SuspendCars(CarSpawner.Instance.AllCars.ToList()));
+                FarCarOpt.RunSuspendCars(true, [], CarSpawner.Instance.AllCars.ToList());
                 return;
             }
 
@@ -158,7 +158,7 @@ namespace PersistentJobsMod {
                 return;
             }
 
-            SingletonBehaviour<CoroutineManager>.Instance.Run(FarCarOpt.SuspendCars(trainCar.trainset.cars.ToList()));
+            FarCarOpt.RunSuspendCars(true, [], trainCar.trainset.cars.ToList());
         }
 
         [RegisterCommand("PJ.ResumeCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
