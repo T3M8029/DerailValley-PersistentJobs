@@ -24,7 +24,6 @@ namespace PersistentJobsMod.HarmonyPatches.Pausing
         public static void FinishLoadingPatch()
         {
             Main.Pause = false;
-            FarCarOpt.SuspendIteration = 2;
             FarCarOpt.RunSuspendCars(true);
         }
     }

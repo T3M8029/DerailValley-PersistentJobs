@@ -36,7 +36,7 @@ namespace PersistentJobsMod.Utilities {
         {
             Job jobOfCar = SingletonBehaviour<JobsManager>.Instance.GetJobOfCar(logicCar, false);
             if (jobOfCar == null) return null;
-            List<JobChainController> currentJobChains = StationController.GetStationByYardID(jobOfCar.chainData.chainOriginYardId).ProceduralJobsController.GetCurrentJobChains();
+            List<JobChainController> currentJobChains = StationController.GetStationByYardID(jobOfCar.ID.Split('-')[0]).ProceduralJobsController.GetCurrentJobChains();
             return currentJobChains?.FirstOrDefault(jcc => jcc.carsForJobChain.Contains(logicCar));
         }
 

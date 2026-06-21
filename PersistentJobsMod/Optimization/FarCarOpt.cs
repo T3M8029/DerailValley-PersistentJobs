@@ -1,7 +1,7 @@
-﻿using DV.Booklets;
-using DV.JObjectExtstensions;
+﻿using DV.JObjectExtstensions;
 using DV.Logic.Job;
 using DV.ServicePenalty;
+using DV.ThingTypes;
 using DV.Utils;
 using HarmonyLib;
 using Newtonsoft.Json.Linq;
@@ -19,8 +19,8 @@ namespace PersistentJobsMod.Optimization
 {
     public static class FarCarOpt
     {
-        public static RailTrack[] AllTracks;
-        public static int SuspendIteration;
+        private static RailTrack[] AllTracks;
+        private static int SuspendIteration;
 
         public static TrainCar CurrentTrainCarToSuspend;
         public static string CurrentCarIDToResume;
@@ -119,13 +119,13 @@ namespace PersistentJobsMod.Optimization
             {
                 UnityEngine.Debug.Log($"Problem when suspending trainCar {trainCar.ID}");
                 UnityEngine.Debug.LogException(ex);
-                returnBool = false;                
+                returnBool = false;
             }
             finally
             {
                 CurrentTrainCarToSuspend = null;
             }
-            
+
             return returnBool;
         }
 
@@ -235,9 +235,9 @@ namespace PersistentJobsMod.Optimization
                         sljd.loadData.ForEach(ld => ld.cars.Replace(oldCar, newLogicCar));
                         break;
 
-                    case StaticShuntingUnloadJobDefinition sljd:
-                        sljd.carsPerDestinationTrack.ForEach(cpt => cpt.cars.Replace(oldCar, newLogicCar));
-                        sljd.unloadData.ForEach(ld => ld.cars.Replace(oldCar, newLogicCar));
+                    case StaticShuntingUnloadJobDefinition sujd:
+                        sujd.carsPerDestinationTrack.ForEach(cpt => cpt.cars.Replace(oldCar, newLogicCar));
+                        sujd.unloadData.ForEach(ld => ld.cars.Replace(oldCar, newLogicCar));
                         break;
 
                     default:
@@ -339,7 +339,7 @@ namespace PersistentJobsMod.Optimization
             }
         }
 
-        public static IEnumerator SuspendCars(List<TrainCar> trainCars)
+        private static IEnumerator SuspendCars(List<TrainCar> trainCars)
         {
             if (trainCars is null || !trainCars.Any()) yield break;
             if (!WorldStreamingInit.IsLoaded) yield break;
@@ -374,6 +374,7 @@ namespace PersistentJobsMod.Optimization
 
         public static bool RunSuspendCars(bool immediately = false, List<StationController> where = null, List<TrainCar> optCars = null)
         {
+            if (!MultiplayerShim.IsHost) return false;
             SuspendIteration++;
             if (!immediately && (SuspendIteration % 2 > 0)) return false;
             if (!Main.Settings.SuspendFarAwayCars) return false;
@@ -423,7 +424,7 @@ namespace PersistentJobsMod.Optimization
                     foreach (var track in stationTracks)
                     {
                         cars.UnionWith(GetTrainCarsToSuspendOnTrack(track));
-                        
+
                         if (fst.ElapsedMilliseconds > 2)
                         {
                             yield return ("frame time elapsed", null);
@@ -483,13 +484,13 @@ namespace PersistentJobsMod.Optimization
 
         private static bool IsTrainsetValid(IEnumerable<TrainCar> trainset)
         {
-            foreach (var trainCar in trainset) if (trainCar == null || trainCar.uniqueCar || trainCar.IsLoco || trainCar.IsCaboose || trainCar.preventDelete || trainCar.logicCar?.ID == null || trainCar.derailed || !trainCar.isEligibleForSleep) return false;
+            foreach (var trainCar in trainset) if (trainCar == null || trainCar.uniqueCar || CarTypes.IsAnyLocomotiveOrTender(trainCar.carLivery) || trainCar.IsCaboose || trainCar.preventDelete || trainCar.logicCar?.ID == null || trainCar.derailed || !trainCar.isEligibleForSleep) return false;
             return true;
         }
 
         public static bool ResumeCarsInStation(string stationID)
         {
-            if (stationID is null || stationID == string.Empty) return false;
+            if (!MultiplayerShim.IsHost || stationID is null || stationID == string.Empty) return false;
             if (!WorldStreamingInit.IsLoaded) return false;
 
             stationID = stationID.Trim().ToUpper();
@@ -512,6 +513,8 @@ namespace PersistentJobsMod.Optimization
 
         public static bool RunResumeCars(List<string> guids, string location)
         {
+            if (!MultiplayerShim.IsHost) return false;
+
             if (ResumeCoroRunning)
             {
                 if (ResumeCoroutine.Item3 != location) PendingResumes.Enqueue((guids, location));

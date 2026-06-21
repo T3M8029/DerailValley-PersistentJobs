@@ -3,6 +3,7 @@ using DV.Booklets;
 using DV.Logic.Job;
 using DV.ThingTypes;
 using DV.RenderTextureSystem.BookletRender;
+using DV.Simulation.Cars;
 using HarmonyLib;
 using PersistentJobsMod.Extensions;
 using PersistentJobsMod.JobGenerators;
@@ -29,8 +30,6 @@ using RouteTrackRef = PersistentJobsMod.Utilities.ReflectionUtilities.Foreign<Pe
 using RouteTypeRef = PersistentJobsMod.Utilities.ReflectionUtilities.Foreign<PersistentJobsMod.ModInteraction.PaxJobsCompat.Tags.RouteType>;
 using PlatformControllerRef = PersistentJobsMod.Utilities.ReflectionUtilities.Foreign<PersistentJobsMod.ModInteraction.PaxJobsCompat.Tags.PlatformController>;
 using PassengerJobDataRef = PersistentJobsMod.Utilities.ReflectionUtilities.Foreign<PersistentJobsMod.ModInteraction.PaxJobsCompat.Tags.PassengerJobData>;
-using DV.Simulation.Cars;
-using PersistentJobsMod.HarmonyPatches.Optimization;
 #endregion
 
 namespace PersistentJobsMod.ModInteraction

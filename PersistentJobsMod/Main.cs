@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityModManagerNet;
+using static UnityModManagerNet.UnityModManager;
 
 namespace PersistentJobsMod {
     [EnableReloading]
@@ -74,6 +75,9 @@ namespace PersistentJobsMod {
             if (WorldStreamingInit.IsStreamingDone) SetupOnReload();
 
             TryLoadPaxJobsCompat();
+
+            InitializeShim(_modEntry);
+            _modEntry.OnLateUpdate += InitializeShim;
             Pause = false;
         }
 
@@ -179,6 +183,13 @@ namespace PersistentJobsMod {
             {
                 _modEntry.Logger.Log($"Targeted version of optional mod Passanger Jobs (5.3) is not present, inactive, or has ran into errors, skipping mod compatibility");
             }
+        }
+
+        public static void InitializeShim(ModEntry modEntry, float _ = 0)
+        {
+            modEntry.Logger.Log("Trying to load compatibility with MP mod");
+            modEntry.OnLateUpdate -= InitializeShim;
+            MultiplayerShim.Initialize(_modEntry);
         }
 
         public static void HandleUnhandledException(Exception e, string location) {

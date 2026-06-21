@@ -24,7 +24,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobChainControllers {
         public static void Prefix(JobChainController __instance,
                 List<StaticJobDefinition> ___jobChain,
                 Job lastJobInChain) {
-            if (!Main._modEntry.Active) {
+            if (!Main._modEntry.Active || !MultiplayerShim.IsHost) {
                 return;
             }
 

@@ -22,13 +22,22 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
         public static bool Prefix(JobValidator __instance, PrinterController ___bookletPrinter,
             JobOverview jobOverview) {
             try {
-                if (!Main._modEntry.Active) return true;
+                if (!Main._modEntry.Active || !MultiplayerShim.IsHost) return true;
 
                 var job = jobOverview.job;
                 var allStations = UnityEngine.Object.FindObjectsOfType<StationController>();
                 var stationController = allStations.FirstOrDefault(st => st.logicStation.availableJobs.Contains(job));
 
                 if (___bookletPrinter.IsOnCooldown || job.State != JobState.Available || stationController == null) return true;
+
+                var jobChainController = stationController.ProceduralJobsController.GetCurrentJobChains().FirstOrDefault(jcc => jcc.currentJobInChain == job);
+                if (FarCarOpt.SuspendedCarGUIDToJobChainController.ContainsValue(jobChainController ??= new JobChainController(new()))) //the new is just a fallthrough case instead of null
+                {
+                    Debug.LogWarning("[PersistentJobsMod] The cars for the job are still suspended!");
+                    FarCarOpt.RunResumeCars(jobChainController?.carsForJobChain.Select(c => c.carGuid).ToList(), "job validating");
+                    __instance.StartCoroutine(HandleJobAcceptnceFaliure(___bookletPrinter, false));
+                    return false;
+                }
 
                 // expire the job if all associated cars are outside the job destruction range
                 // the base method's logic will handle generating the expired report
@@ -39,15 +48,6 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
                             innerTask => AreTaskCarsInRange(innerTask, stationRange)))) {
                     job.ExpireJob();
                     return true;
-                }
-
-                var jobChainController = stationController.ProceduralJobsController.GetCurrentJobChains().FirstOrDefault(jcc => jcc.currentJobInChain == job);
-                if (FarCarOpt.SuspendedCarGUIDToJobChainController.ContainsValue(jobChainController ??= new JobChainController(new()))) //the new is just a fallthrough case instead of null
-                {
-                    Debug.LogWarning("[PersistentJobsMod] The cars for the job are still suspended!");
-                    FarCarOpt.RunResumeCars(jobChainController?.carsForJobChain.Select(c => c.carGuid).ToList(), "job validating");
-                    __instance.StartCoroutine(HandleJobAcceptnceFaliure(___bookletPrinter, false));
-                    return false;
                 }
 
                 // reserve space for job and for shunting (un)load jobs, require cars to not already be on the warehouse track

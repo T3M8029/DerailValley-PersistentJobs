@@ -22,9 +22,6 @@ namespace PersistentJobsMod.HarmonyPatches.Save {
         {   
             while (__result.MoveNext()) yield return __result.Current;
 
-            FarCarOpt.SuspendIteration = 2;
-            FarCarOpt.RunSuspendCars(true);
-
             foreach (var popup in stringsToShow)
             {
                 yield return WaitFor.Seconds(2f);
