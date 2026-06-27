@@ -15,7 +15,7 @@ namespace PersistentJobsMod.HarmonyPatches.Save
             if ((key == SaveGameKeys.Cars) || (key == SaveGameKeys.Jobs))
             {
                 Main._modEntry.Logger.Log($"SaveGameData_RemoveData_Patch.Postfix: Savegame data reset, possibly due to mod or game update. Resetting all jobs and stations.");
-                CarsSaveManager_Patches.ResetJobsAndCarsState();
+                CarsSaveManager_Load_Patches.ResetJobsAndCarsState();
             }
         }
     }

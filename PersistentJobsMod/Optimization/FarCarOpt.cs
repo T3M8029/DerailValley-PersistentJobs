@@ -219,6 +219,7 @@ namespace PersistentJobsMod.Optimization
                     if (cars == null) return;
                     cars.Replace(oldCar, newLogicCar);
                 });
+                PersistentJobsModInteractionFeatures.InvokeJobCarsChanged(job, newLogicCar);
 
                 switch (sjd)
                 {
@@ -349,7 +350,7 @@ namespace PersistentJobsMod.Optimization
 
             if (AllTracks == null || AllTracks.Length == 0) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
             //var viableTrainCars = (trainCars.Where(tc => !(tc is null || tc.uniqueCar || tc.IsLoco || tc.IsCaboose || tc.preventDelete || tc.logicCar is null))).ToList();
-            var viableTrainCars = (trainCars.Where(tc => !(tc is null || tc.uniqueCar || tc.IsLoco || tc.IsCaboose))).ToList();
+            var viableTrainCars = (trainCars.Where(tc => !(tc is null || tc.uniqueCar || CarTypes.IsAnyLocomotiveOrTender(tc.carLivery) || tc.IsCaboose))).ToList();
             var trainCarObjects = viableTrainCars.Select(tc => CarsSaveManager.GetCarSaveData(tc, AllTracks)).ToList();
             var diff = trainCars.Except(viableTrainCars).ToList();
             if (diff.Any()) Main._modEntry.Logger.Warning($"cars excepted from suspend {string.Join(", ", diff)}");

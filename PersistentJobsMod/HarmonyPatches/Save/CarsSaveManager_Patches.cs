@@ -16,7 +16,7 @@ namespace PersistentJobsMod.HarmonyPatches.Save
 {
     /// <summary>patch CarsSaveManager.Load to ensure CarsSaveManager.TracksHash exists</summary>
     [HarmonyPatch(typeof(CarsSaveManager), "Load")]
-    public static class CarsSaveManager_Patches
+    public static class CarsSaveManager_Load_Patches
     {
         public static void Postfix(ref bool __result)
         {
@@ -25,7 +25,7 @@ namespace PersistentJobsMod.HarmonyPatches.Save
             //if no car data is loaded (eg. game update reset them), expire all jobs and allow new cars to re-spawn 
             if (__result == false)
             {
-                Main._modEntry.Logger.Warning($"CarsSaveManager_Patches.Load.Postfix: No savegame data found, possibly due to game update. Resetting all jobs and stations.");
+                Main._modEntry.Logger.Warning($"CarsSaveManager_Load_Patches.Load.Postfix: No savegame data found, possibly due to game update. Resetting all jobs and stations.");
                 ResetJobsAndCarsState();
             }
         }
@@ -92,7 +92,7 @@ namespace PersistentJobsMod.HarmonyPatches.Save
             if (ReflectionUtilities.IsInCallers(methodName: "LoadingNonBlockingCoro", excludeMethodName: "Manager.Load_Patch", specificFrameNumeric: "", log: false))
             {
                 Main._modEntry.Logger.Log($" CarsSaveManager_DeleteAllExistingCars_Patch.Postfix: Savegame data reset, possibly due to mod or game update. Resetting all jobs and stations.");
-                CarsSaveManager_Patches.ResetJobsAndCarsState();
+                CarsSaveManager_Load_Patches.ResetJobsAndCarsState();
             }
         }
     }
@@ -117,9 +117,9 @@ namespace PersistentJobsMod.HarmonyPatches.Save
         {
             if (tracks == null || tracks.Length == 0) tracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
 
-            if (SingletonBehaviour<IdGenerator>.Instance.carGuidToCar.ContainsKey(carData.GetString("id")))
+            if (SingletonBehaviour<IdGenerator>.Instance.carGuidToCar.ContainsKey(carData.GetString("carGuid")))
             {
-                UnityEngine.Debug.LogError($"Car with ID {carData.GetString("id")} already present, skipping entry");
+                UnityEngine.Debug.LogError($"Car {carData.GetString("id")} with guid {carData.GetString("carGuid")} already present, skipping entry");
                 return false;
             }
 

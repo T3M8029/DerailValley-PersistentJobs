@@ -19,7 +19,7 @@ namespace PersistentJobsMod.HarmonyPatches.Save
         {
             if(__result == "tutorial/trains_were_reset")
             {
-                CarsSaveManager_Patches.ResetJobsAndCarsState();
+                CarsSaveManager_Load_Patches.ResetJobsAndCarsState();
             }
         }
 

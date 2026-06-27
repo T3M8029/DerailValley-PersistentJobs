@@ -18,7 +18,7 @@ namespace PersistentJobsMod.HarmonyPatches.Optimization
         [HarmonyPrefix]
         public static bool OnLogicCarInitialized_Prefix(SimController __instance)
         {
-            if (!CarTypes.IsLocomotive(__instance.train.carLivery) || !__instance.train.IsLoco /*|| !(__instance.train.ID == FarCarOpt.CurrentCarIDToResume)*/)
+            if (!CarTypes.IsAnyLocomotiveOrTender(__instance.train.carLivery) /* || !__instance.train.IsLoco || !(__instance.train.ID == FarCarOpt.CurrentCarIDToResume)*/)
             {
                 Main._modEntry.Logger.Log($"Skipping simCont setup for car {__instance.train.ID}");
                 __instance.train.LogicCarInitialized -= __instance.OnLogicCarInitialized;

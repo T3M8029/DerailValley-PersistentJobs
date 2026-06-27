@@ -21,74 +21,88 @@ namespace PersistentJobsMod.CarSpawningJobGenerators {
 
         private static IEnumerator<(string NextStageName, object Result)> GenerateProceduralJobsCoroutineCore(StationProceduralJobsController instance, StationProceduralJobsRuleset stationProceduralJobsRuleset)
         {
-            while (FarCarOpt.ResumeCoroRunning) yield return ("resume already running", null);
-
-            bool stationDoneResuming = false;
-            void OnResumeCompleted(string id)
-            {
-                if (id == instance.stationController.logicStation.ID) stationDoneResuming = true;
-            }
-
-            FarCarOpt.ResumeCompleted += OnResumeCompleted;
             try
             {
-                if (!FarCarOpt.ResumeCarsInStation(instance.stationController.logicStation.ID))
+                while (FarCarOpt.ResumeCoroRunning) yield return ("resume already running", null);
+
+                bool stationDoneResuming = false;
+                void OnResumeCompleted(string id)
                 {
-                    Main._modEntry.Logger.Log($"failiure or not resumed anything");
-                    stationDoneResuming = true;
+                    if (id == instance.stationController.logicStation.ID) stationDoneResuming = true;
                 }
-                yield return ("waiting for car resume", new WaitUntil(() => stationDoneResuming));
+
+                FarCarOpt.ResumeCompleted += OnResumeCompleted;
+                try
+                {
+                    if (!FarCarOpt.ResumeCarsInStation(instance.stationController.logicStation.ID))
+                    {
+                        Main._modEntry.Logger.Log($"failiure or not resumed anything");
+                        stationDoneResuming = true;
+                    }
+                    yield return ("waiting for car resume", new WaitUntil(() => stationDoneResuming));
+                }
+                finally
+                {
+                    FarCarOpt.ResumeCompleted -= OnResumeCompleted;
+                }
+                yield return ("safety wait", WaitFor.SecondsRealtime(0.5f));
+
+                var alreadyPresentJobsCount = instance.stationController.logicStation.availableJobs.Count;
+                var maxGeneratableJobsNum = stationProceduralJobsRuleset.jobsCapacity - alreadyPresentJobsCount;
+                if (Main.PaxJobsPresent && PaxJobsCompat.IsPassengerStation(instance.stationController.stationInfo.YardID)) maxGeneratableJobsNum += 6;
+                var generateJobsAttempts = 0;
+                var forcePlayerLicensedJobGeneration = true;
+                Main._modEntry.Logger.Log($"{instance.stationController.stationInfo.YardID} job generation started. {alreadyPresentJobsCount} jobs already present. At most {maxGeneratableJobsNum} job chains will be generated.");
+                while ((alreadyPresentJobsCount < maxGeneratableJobsNum) && (generateJobsAttempts < 30))
+                {
+                    yield return ("generate next job", WaitFor.FixedUpdate);
+
+                    if (generateJobsAttempts > 10 & forcePlayerLicensedJobGeneration)
+                    {
+                        Main._modEntry.Logger.Log("Couldn't generate any player licensed job");
+                        forcePlayerLicensedJobGeneration = false;
+                    }
+                    var tickCount = Environment.TickCount;
+                    Main._modEntry.Logger.Log($"Trying to generate a job (rng seed: {tickCount})");
+                    var jobChain = GenerateJobChain(stationProceduralJobsRuleset, instance.stationController, new Random(tickCount), forcePlayerLicensedJobGeneration);
+
+                    // this needs to be accessed by the Traverse because Publicizer cannot give us access to the underlying field of the event
+                    var generationAttempt = (Action)Traverse.Create(instance).Field("JobGenerationAttempt").GetValue();
+
+                    generationAttempt?.Invoke();
+                    if (jobChain != null)
+                    {
+                        if (forcePlayerLicensedJobGeneration)
+                        {
+                            forcePlayerLicensedJobGeneration = false;
+                        }
+                        Main._modEntry.Logger.Log($"Generated job {jobChain.currentJobInChain.ID} (rng seed: {tickCount})");
+                        for (var i = 0; i < 12; ++i)
+                        {
+                            yield return ("successful generation backoff", null);
+                        }
+                    }
+                    else
+                    {
+                        ++generateJobsAttempts;
+                        yield return ("unsuccessful generation backoff", null);
+                    }
+                }
+
+
+                Main._modEntry.Logger.Log($"{instance.stationController.stationInfo.YardID} job generation ended. {instance.stationController.logicStation.availableJobs.Count - alreadyPresentJobsCount} jobs were generated with {generateJobsAttempts} job generation attempts");
+
+                if (Main.PaxJobsPresent && PaxJobsCompat.AllPaxStations().Contains(instance.stationController))
+                {
+                    PaxJobsCompat.OverrideSpawnFlagForPaxJ = true;
+                    PaxJobsCompat.PaxJobsOrigGenJobsInStation(instance.stationController.stationInfo.YardID);
+                }
+
             }
             finally
             {
-                FarCarOpt.ResumeCompleted -= OnResumeCompleted;
-            }            
-            yield return ("safety wait", WaitFor.SecondsRealtime(0.5f));
-
-            var alreadyPresentJobsCount = instance.stationController.logicStation.availableJobs.Count;
-            var maxGeneratableJobsNum = stationProceduralJobsRuleset.jobsCapacity - alreadyPresentJobsCount;
-            if (Main.PaxJobsPresent && PaxJobsCompat.IsPassengerStation(instance.stationController.stationInfo.YardID)) maxGeneratableJobsNum += 6;
-            var generateJobsAttempts = 0;
-            var forcePlayerLicensedJobGeneration = true;
-            Main._modEntry.Logger.Log($"{instance.stationController.stationInfo.YardID} job generation started. {alreadyPresentJobsCount} jobs already present. At most {maxGeneratableJobsNum} job chains will be generated.");
-            while ((alreadyPresentJobsCount < maxGeneratableJobsNum) && (generateJobsAttempts < 30)) {
-                yield return ("generate next job", WaitFor.FixedUpdate);
-
-                if (generateJobsAttempts > 10 & forcePlayerLicensedJobGeneration) {
-                    Main._modEntry.Logger.Log("Couldn't generate any player licensed job");
-                    forcePlayerLicensedJobGeneration = false;
-                }
-                var tickCount = Environment.TickCount;
-                Main._modEntry.Logger.Log($"Trying to generate a job (rng seed: {tickCount})");
-                var jobChain = GenerateJobChain(stationProceduralJobsRuleset, instance.stationController, new Random(tickCount), forcePlayerLicensedJobGeneration);
-                
-                // this needs to be accessed by the Traverse because Publicizer cannot give us access to the underlying field of the event
-                var generationAttempt = (Action)Traverse.Create(instance).Field("JobGenerationAttempt").GetValue();
-                
-                generationAttempt?.Invoke();
-                if (jobChain != null) {
-                    if (forcePlayerLicensedJobGeneration) {
-                        forcePlayerLicensedJobGeneration = false;
-                    }
-                    Main._modEntry.Logger.Log($"Generated job {jobChain.currentJobInChain.ID} (rng seed: {tickCount})");
-                    for (var i = 0; i < 12; ++i) {
-                        yield return ("successful generation backoff", null);
-                    }
-                } else {
-                    ++generateJobsAttempts;
-                    yield return ("unsuccessful generation backoff", null);
-                }
+                instance.generationCoro = null;
             }
-
-            Main._modEntry.Logger.Log($"{instance.stationController.stationInfo.YardID} job generation ended. {instance.stationController.logicStation.availableJobs.Count - alreadyPresentJobsCount} jobs were generated with {generateJobsAttempts} job generation attempts");
-            
-            if (Main.PaxJobsPresent && PaxJobsCompat.AllPaxStations().Contains(instance.stationController))
-            {
-                PaxJobsCompat.OverrideSpawnFlagForPaxJ = true;
-                PaxJobsCompat.PaxJobsOrigGenJobsInStation(instance.stationController.stationInfo.YardID);
-            }
-
-            instance.generationCoro = null;
         }
 
         private static JobChainController GenerateJobChain(StationProceduralJobsRuleset generationRuleset, StationController stationController, Random random, bool forceJobWithLicenseRequirementFulfilled) {

@@ -139,7 +139,7 @@ namespace PersistentJobsMod {
         {
             PersistentJobsMod.Persistence.StationIdCarSpawningPersistence.Instance.ClearStationsSpawnedCarsFlagForAllStations();
             WorldStreamingInitLoadingFinished();
-            PersistentJobsMod.HarmonyPatches.Save.CarsSaveManager_Patches.GetModSaveData();
+            PersistentJobsMod.HarmonyPatches.Save.CarsSaveManager_Load_Patches.GetModSaveData();
         }
 
         private static void WorldStreamingInitLoadingFinished() {
