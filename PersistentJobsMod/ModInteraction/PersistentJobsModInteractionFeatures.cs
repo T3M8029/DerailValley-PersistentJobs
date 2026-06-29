@@ -9,7 +9,11 @@ namespace PersistentJobsMod.ModInteraction
 
         public static void RegisterJobTracksChangedListener(Action<Job> callback)
         {
-            JobTracksChanged += job => callback(job);
+            JobTracksChanged += callback;
+        }
+        public static void UnregisterJobTracksChangedListener(Action<Job> callback)
+        {
+            JobTracksChanged -= callback;
         }
 
         public static void InvokeJobTrackChanged(Job job)
@@ -17,11 +21,16 @@ namespace PersistentJobsMod.ModInteraction
             JobTracksChanged?.Invoke(job);
         }
 
+
         public static event Action<(Job, Car)> JobCarsChanged;
 
         public static void RegisterJobCarsChangedListener(Action<(Job, Car)> callback)
         {
-            JobCarsChanged += jct => callback(jct);
+            JobCarsChanged += callback;
+        }
+        public static void UnregisterJobCarsChangedListener(Action<(Job, Car)> callback)
+        {
+            JobCarsChanged -= callback;
         }
 
         public static void InvokeJobCarsChanged(Job job, Car car)
