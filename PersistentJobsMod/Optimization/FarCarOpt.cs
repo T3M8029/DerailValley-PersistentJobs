@@ -19,7 +19,7 @@ namespace PersistentJobsMod.Optimization
 {
     public static class FarCarOpt
     {
-        private static RailTrack[] AllTracks;
+        public static RailTrack[] AllTracks;
         private static int SuspendIteration;
 
         public static TrainCar CurrentTrainCarToSuspend;
@@ -41,6 +41,10 @@ namespace PersistentJobsMod.Optimization
         public static readonly Dictionary<string, JobChainController> SuspendedCarGUIDToJobChainController = [];
         public static readonly Dictionary<string, (DebtTrackerBase, CarDebtData)> SuspendedCarGUIDToDebtTracker = [];
         public static readonly Dictionary<string, List<string>> StationIDtoSuspendedCarGUID = [];
+
+        public static readonly HashSet<int> OccupiedRailTrackIndexes = [];
+
+        public static readonly Dictionary<TrainCarType, float> TrainCarTypeToInterCouplerDistance = [];
 
         public static event Action<string> ResumeCompleted;
         public static event Action SuspendCompleted;
@@ -76,11 +80,15 @@ namespace PersistentJobsMod.Optimization
 
                 carObj ??= CarsSaveManager.GetCarSaveData(trainCar, allTracks);
 
-                if ((carObj.GetInt("bog1TrackChildInd").Value == -1) || (carObj.GetInt("bog2TrackChildInd").Value == -1))
+                int bog1TrackChildInd = carObj.GetInt("bog1TrackChildInd").Value;
+                int bog2TrackChildInd = carObj.GetInt("bog2TrackChildInd").Value;
+                if (bog1TrackChildInd == -1 || bog2TrackChildInd == -1)
                 {
                     UnityEngine.Debug.LogError($"[PersistentJobsMod] Car with GUID {carGUID} has invalid track {trainCar.logicCar.CurrentTrack.ID} saved!");
                     return returnBool;
                 }
+                OccupiedRailTrackIndexes.Add(bog1TrackChildInd);
+                OccupiedRailTrackIndexes.Add(bog2TrackChildInd);
 
                 var carJccOrNull = CarTrackAssignment.GetControllerOfCarOrNull(logicCar);
                 var yardID = (CarTrackAssignment.FindNearestNamedTrackOrNull([trainCar]))?.ID.yardId;
@@ -103,6 +111,9 @@ namespace PersistentJobsMod.Optimization
                 SuspendedCarGUIDToCarID.Add(carGUID, carID);
                 SuspendedCarGUIDToJobChainController.Add(carGUID, carJccOrNull);
                 SuspendedCarGUIDToDebtTracker.Add(carGUID, (tracker, CarDebtData.LoadCarDebtFromSaveData(frozenCarDebtData.GetCarDebtSaveData())));
+
+                var tct = trainCar.carType;
+                if (!TrainCarTypeToInterCouplerDistance.ContainsKey(tct)) TrainCarTypeToInterCouplerDistance[tct] = trainCar.InterCouplerDistance;
 
                 if (StationIDtoSuspendedCarGUID.TryGetValue(yardID ?? "#Y", out var carGuids)) carGuids.Add(carGUID);
                 else StationIDtoSuspendedCarGUID.Add(yardID ?? "#Y", [carGUID]);
@@ -142,6 +153,16 @@ namespace PersistentJobsMod.Optimization
 
                 if (AllTracks == null || AllTracks.Length == 0) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
                 var allTracks = AllTracks;
+
+                int bog1TrackChildInd = carObj.GetInt("bog1TrackChildInd").Value;
+                int bog2TrackChildInd = carObj.GetInt("bog2TrackChildInd").Value;
+                if (bog1TrackChildInd == -1 || bog2TrackChildInd == -1)
+                {
+                    UnityEngine.Debug.LogError($"[PersistentJobsMod] Car with GUID {carGUID} has invalid track saved!");
+                    return false;
+                }
+                OccupiedRailTrackIndexes.Remove(bog1TrackChildInd);
+                OccupiedRailTrackIndexes.Remove(bog2TrackChildInd);
 
                 string oldCarID = SuspendedCarGUIDToCarID[carGUID];
                 CurrentCarIDToResume = oldCarID;
@@ -217,9 +238,8 @@ namespace PersistentJobsMod.Optimization
                 {
                     var cars = Traverse.Create(task).Field("cars").GetValue<IList<Car>>();
                     if (cars == null) return;
-                    cars.Replace(oldCar, newLogicCar);
+                    if (cars.Replace(oldCar, newLogicCar) != -1) PersistentJobsModInteractionFeatures.InvokeJobCarsChanged(job, newLogicCar);
                 });
-                PersistentJobsModInteractionFeatures.InvokeJobCarsChanged(job, newLogicCar);
 
                 switch (sjd)
                 {
@@ -590,6 +610,7 @@ namespace PersistentJobsMod.Optimization
             SuspendedCarGUIDToJobChainController.Clear();
             SuspendedCarGUIDToDebtTracker.Clear();
             StationIDtoSuspendedCarGUID.Clear();
+            OccupiedRailTrackIndexes.Clear();
             SuspendIteration = 0;
             AllTracks = null;
         }

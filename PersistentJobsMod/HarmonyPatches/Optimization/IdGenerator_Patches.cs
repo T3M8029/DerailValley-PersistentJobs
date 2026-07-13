@@ -11,7 +11,7 @@ using System.Diagnostics;
 namespace PersistentJobsMod.HarmonyPatches.Optimization
 {
     [HarmonyPatch]
-    static class IdGenerator_Patches
+    public static class IdGenerator_Patches
     {
         [HarmonyPatch(typeof(IdGenerator), "UnregisterCarId")]
         [HarmonyPrefix]

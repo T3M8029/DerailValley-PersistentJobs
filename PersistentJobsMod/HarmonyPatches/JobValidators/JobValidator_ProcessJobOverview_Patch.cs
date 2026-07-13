@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Unity.Jobs;
 using UnityEngine;
+using UnityModManagerNet;
 using Random = System.Random;
 
 namespace PersistentJobsMod.HarmonyPatches.JobValidators {
@@ -22,7 +23,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
         public static bool Prefix(JobValidator __instance, PrinterController ___bookletPrinter,
             JobOverview jobOverview) {
             try {
-                if (!Main._modEntry.Active || !MultiplayerShim.IsHost) return true;
+                if (!Main._modEntry.Active || !MultiplayerShim.IsHost || (UnityModManager.FindMod("SelfShunt")?.Active == true)) return true;
 
                 var job = jobOverview.job;
                 var allStations = UnityEngine.Object.FindObjectsOfType<StationController>();

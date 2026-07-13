@@ -22,6 +22,9 @@ namespace PersistentJobsMod {
         [Draw("Suspend cars in far away stations in order to improve performance")]
         public bool SuspendFarAwayCars = true;
 
+        [Draw("\"Occupy\" track where cars were suspended by a dummy bogie - for use with signals mods (experimental!)")]
+        public bool DummyBogiesForTracksOfSuspendedCars = false;
+
         public override void Save(UnityModManager.ModEntry modEntry) {
             Save(this, modEntry);
         }
