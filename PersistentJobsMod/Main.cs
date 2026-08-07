@@ -133,6 +133,7 @@ namespace PersistentJobsMod {
 
         static void OnSaveGUI(UnityModManager.ModEntry modEntry) {
             Settings.Save(modEntry);
+            Settings.DrawButtons();
         }
 
         private static void SetupOnReload()

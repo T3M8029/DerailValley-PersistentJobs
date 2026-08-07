@@ -141,11 +141,11 @@ namespace PersistentJobsMod {
             if (!FarCarOpt.SuspendCar(trainCar)) Debug.Log($"Problem suspending train car with ID {trainCarID}");
         }
 
-        [RegisterCommand("PJ.SuspendCostistOfCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
-        public static void SuspendCostistOfCar(CommandArg[] args)
+        [RegisterCommand("PJ.SuspendConsistOfCar", Help = "", MinArgCount = 1, MaxArgCount = 1)]
+        public static void SuspendConsistOfCar(CommandArg[] args)
         {
             var trainCarID = args[0].String.Trim().ToUpper();
-            if (trainCarID is "all" or "*")
+            if (trainCarID is "ALL" or "*")
             {
                 FarCarOpt.RunSuspendCars(true, [], CarSpawner.Instance.AllCars.ToList());
                 return;

@@ -99,6 +99,9 @@
     <Reference Include="UnityEngine.IMGUIModule">
       <Private>False</Private>
     </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <Private>False</Private>
+    </Reference>
     <Reference Include="UnityEngine.PhysicsModule">
       <Private>False</Private>
     </Reference>
@@ -129,9 +132,11 @@
     <Compile Include="HarmonyPatches\JobChainControllers\Job_Patches.cs" />
     <Compile Include="HarmonyPatches\JobChainControllers\StaticShuntingUnloadJobDefinition_Patch.cs" />
     <Compile Include="HarmonyPatches\JobChainControllers\StaticShuntingLoadJobDefinition_Patch.cs" />
+    <Compile Include="HarmonyPatches\JobValidators\JobValidator_SummonAllActiveJobBooklets_Patch.cs" />
     <Compile Include="HarmonyPatches\JobValidators\JobValidator_ValidateJob_Patch.cs" />
     <Compile Include="HarmonyPatches\Optimization\DebtSystemPatches.cs" />
     <Compile Include="HarmonyPatches\Optimization\IdGenerator_Patches.cs" />
+    <Compile Include="HarmonyPatches\Optimization\LostAndFoundItemsSummoner_Patch.cs" />
     <Compile Include="HarmonyPatches\Optimization\RailTrackEx_BogiesOnTrack_Patch.cs" />
     <Compile Include="HarmonyPatches\Optimization\SimControllerPatches.cs" />
     <Compile Include="HarmonyPatches\Pausing\FastTravelController_Patches.cs" />

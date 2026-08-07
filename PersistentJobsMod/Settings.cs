@@ -1,7 +1,11 @@
-﻿using UnityModManagerNet;
+﻿using System.Linq;
+using UnityEngine;
+using UnityModManagerNet;
 
-namespace PersistentJobsMod {
-    public sealed class Settings : UnityModManager.ModSettings, IDrawable {
+namespace PersistentJobsMod
+{
+    public sealed class Settings : UnityModManager.ModSettings, IDrawable
+    {
         [Draw("Prevent accepting shunting (un)load jobs if cars are already on a loading track (L)")]
         public bool PreventStartingShuntingJobForCarsOnWarehouseTrack = true;
 
@@ -25,7 +29,32 @@ namespace PersistentJobsMod {
         [Draw("\"Occupy\" track where cars were suspended by a dummy bogie - for use with signals mods (experimental!)")]
         public bool DummyBogiesForTracksOfSuspendedCars = false;
 
-        public override void Save(UnityModManager.ModEntry modEntry) {
+        public void DrawButtons()
+        {
+            if (SuspendFarAwayCars && WorldStreamingInit.IsLoaded)
+            {
+                var stations = StationController.allStations?.Where(sc => sc.stationRange.IsPlayerInJobGenerationZone(sc.stationRange.PlayerSqrDistanceFromStationCenter))?.Select(sc => sc.stationInfo.YardID);
+                stations ??= [];
+
+                GUILayout.BeginVertical();
+                GUILayout.Space(20);
+                if (GUILayout.Button("Resume all cars", GUILayout.Width(80))) PersistentJobsMod.Optimization.FarCarOpt.ResumeCarsInStation("ALL");
+
+                foreach (var stationID in stations)
+                {
+                    if (PersistentJobsMod.Optimization.FarCarOpt.StationIDtoSuspendedCarGUID.TryGetValue(stationID, out var suspended) && suspended?.Any() is true)
+                    {
+                        GUILayout.Space(5);
+                        if (GUILayout.Button($"Resume cars in {stationID}", GUILayout.Width(80))) PersistentJobsMod.Optimization.FarCarOpt.ResumeCarsInStation(stationID);
+                    }
+                }
+
+                GUILayout.EndVertical();
+            }
+        }
+
+        public override void Save(UnityModManager.ModEntry modEntry)
+        {
             Save(this, modEntry);
         }
 
