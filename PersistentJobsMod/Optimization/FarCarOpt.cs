@@ -424,13 +424,20 @@ namespace PersistentJobsMod.Optimization
             if (!Main.Settings.SuspendFarAwayCars) return false;
 
             if (AllTracks == null || AllTracks.Length == 0 || AllTracks.Any(rt => rt is null)) AllTracks = SingletonBehaviour<RailTrackRegistryBase>.Instance.OrderedRailtracks;
-            where ??= StationController.allStations.Where(sc => !sc.stationRange.IsPlayerInJobGenerationZone(sc.stationRange.PlayerSqrDistanceFromStationCenter * 2)).ToList();
+            where ??= StationController.allStations.Where(sc => sc.stationRange.IsPlayerOutOfJobDestroyZone(sc.stationRange.PlayerSqrDistanceFromStationCenter * 2, true)).ToList();
             if (where.Any(sc => sc?.gameObject == null)) return false;
 
             if (SuspendCoroRunning && SuspendCoroutine.Item1 != null)
             {
                 if (where.All(sc => SuspendCoroutine.Item2.Contains(sc))) return false;
                 Main._modEntry.Logger.Error($"SuspendCarsCoro already running on {string.Join(", ", SuspendCoroutine.Item2.Select(sc => sc.stationInfo.YardID))}, new coro on {string.Join(", ", where.Select(sc => sc.stationInfo.YardID))} enqued");
+                PendingSuspends.Enqueue((where, optCars));
+                return false;
+            }
+
+            if (ResumeCoroRunning)
+            {
+                Main._modEntry.Logger.Error("ResumeCoro is running now, suspension will be enqueued");
                 PendingSuspends.Enqueue((where, optCars));
                 return false;
             }
@@ -442,12 +449,35 @@ namespace PersistentJobsMod.Optimization
             return true;
         }
 
-        private static IEnumerator<(string NextStageName, object Result)> SuspendCarsCoro(IEnumerable<StationController> viableSCs, HashSet<TrainCar> cars = null)
+        private static IEnumerator<(string NextStageName, object Result)> SuspendCarsCoro(List<StationController> viableSCs, HashSet<TrainCar> cars = null)
         {
             Main._modEntry.Logger.Log(nameof(SuspendCarsCoro));
             while (!WorldStreamingInit.IsLoaded) yield return ("waiting for WorldStreamingInit.IsLoaded", null);
-            while (ResumeCoroRunning) yield return ("waiting for trainCar resuming to finish", null);
-            //yield return ("safety wait", WaitFor.SecondsRealtime(0.5f));
+
+            bool waitForResumeToFinish = false;
+            void OnResumeCompleted(string id)
+            {
+                Main._modEntry.Logger.Log($"Won´t suspend cars in {id} as they just got resumed");
+                viableSCs.RemoveAll(sc => sc.logicStation.ID == id);
+                ResumeCompleted -= OnResumeCompleted;
+                waitForResumeToFinish = false;
+            }
+
+            ResumeCompleted += OnResumeCompleted;
+
+            if (ResumeCoroRunning)
+            {
+                waitForResumeToFinish = true;
+                Main._modEntry.Logger.Error("ResumeCoro is running now somehow");
+            }
+            else
+            {
+                ResumeCompleted -= OnResumeCompleted;
+            }
+
+            //while (ResumeCoroRunning) yield return ("waiting for trainCar resuming to finish", null);
+            yield return ("waiting for car resume", new WaitUntil(() => !waitForResumeToFinish));
+            yield return ("safety wait", WaitFor.SecondsRealtime(0.5f));
 
             var st = Stopwatch.StartNew();
             var fst = Stopwatch.StartNew();
@@ -562,7 +592,7 @@ namespace PersistentJobsMod.Optimization
             if (ResumeCoroRunning)
             {
                 if (ResumeCoroutine.Item3 != location) PendingResumes.Enqueue((guids, location));
-                return false;
+                return true;
             }
 
             ResumeCoroRunning = true;
