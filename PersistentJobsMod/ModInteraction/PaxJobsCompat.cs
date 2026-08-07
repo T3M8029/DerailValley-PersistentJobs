@@ -370,7 +370,7 @@ namespace PersistentJobsMod.ModInteraction
             return correctType && correctDef;
         }
 
-        public static bool IsPaxCars(TrainCar car)
+        public static bool IsPaxCar(TrainCar car)
         {
             var carLiveries = (IEnumerable<TrainCarLivery>)_GetAllPassengerCars.Invoke(null, null);
             return carLiveries != null && car.carLivery != null && carLiveries.Contains(car.carLivery);

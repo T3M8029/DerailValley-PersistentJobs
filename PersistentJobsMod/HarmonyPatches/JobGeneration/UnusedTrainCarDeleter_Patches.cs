@@ -80,7 +80,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
                 return;
             }
 
-            if (StationController.allStations.Any(sc => sc?.gameObject == null)) {
+            if (StationController.allStations?.Any(sc => sc?.gameObject == null) is true) {
                 return;
             }
 
@@ -598,7 +598,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
         public static TrainCarReassignStatus GetTrainCarReassignStatus(TrainCar trainCar, bool ingnorePaxCarStatus = true) {
             if (JobsManager.Instance.GetJobOfCar(trainCar.logicCar) != null) {
                 return TrainCarReassignStatus.HasJob;
-            } else if ((!ingnorePaxCarStatus && Main.PaxJobsPresent) && PaxJobsCompat.IsPaxCars(trainCar)) {              
+            } else if ((!ingnorePaxCarStatus && Main.PaxJobsPresent) && PaxJobsCompat.IsPaxCar(trainCar)) {              
                     return TrainCarReassignStatus.PaxCar;
             } else if (CarTypes.IsRegularCar(trainCar.carLivery)) {
                 if (trainCar.LoadedCargoAmount < 0.001f) {

@@ -51,7 +51,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobChainControllers {
 
                     FinishSubsequentJobChainControllerAndRemoveTrainCarsFromCurrentJobChain(subsequentJobChainController, __instance, lastJobInChain);
                 } else if (lastJobInChain.jobType == JobType.Transport && lastJobDefinition is StaticTransportJobDefinition transportJobDefinition) {
-                    if (Main.PaxJobsPresent && PaxJobsCompat.IsPaxCars(__instance.carsForJobChain.First().TrainCar()))
+                    if (Main.PaxJobsPresent && PaxJobsCompat.IsPaxCar(__instance.carsForJobChain.First().TrainCar()))
                     {
                         CreateSubsequentPaxJobs(__instance, transportJobDefinition, lastJobInChain);
                     }
@@ -108,7 +108,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobChainControllers {
             List<JobChainController> subsequentJobChainControllers = new();
 
             var trainCars = new List<TrainCar>(TrainCar.ExtractTrainCars(__instance.carsForJobChain));
-            if (!(trainCars.Any(tc => !PaxJobsCompat.IsPaxCars(tc))))
+            if (!(trainCars.Any(tc => !PaxJobsCompat.IsPaxCar(tc))))
             {
                 var destinationStation = SingletonBehaviour<LogicController>.Instance.YardIdToStationController[(preceedingJobDefinition.chainData.chainDestinationYardId)];
                 subsequentJobChainControllers.AddRange(PaxJobsCompat.DecideForPaxCarGroups((new List<IReadOnlyList<TrainCar>> { trainCars }), destinationStation));
