@@ -22,6 +22,7 @@ namespace PersistentJobsMod {
         public static Harmony Harmony;
         public static float _initialDistanceRegular = 0f;
         public static float _initialDistanceAnyJobTaken = 0f;
+        public static float _initialGenerateJobsSqrDistance = 0f;
         // ReSharper restore InconsistentNaming
 
         // ReSharper disable once RedundantDefaultMemberInitializer

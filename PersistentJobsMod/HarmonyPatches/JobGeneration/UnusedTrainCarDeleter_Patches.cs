@@ -21,7 +21,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
     /// <summary>tries to generate new jobs for the train cars marked for deletion</summary>
     [HarmonyPatch]
     static class UnusedTrainCarDeleter_Patches {
-        private const double TrainCarJobRegenerationSquareDistance = 640000.0;
+        private const double TrainCarJobRegenerationSquareDistance = 1000000.0;
         private const float COROUTINE_INTERVAL = 60f;
 
         [HarmonyPatch(typeof(UnusedTrainCarDeleter), "TrainCarsDeleteCheck")]
