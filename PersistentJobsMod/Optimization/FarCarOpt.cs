@@ -402,7 +402,7 @@ namespace PersistentJobsMod.Optimization
             {
                 if (!SuspendCar(viableTrainCars[i], trainCarObjects[i])) UnityEngine.Debug.LogError($"Error suspending {viableTrainCars[i].name} index: {i}");
 
-                if (fst.ElapsedMilliseconds > 15)
+                if (fst.ElapsedMilliseconds > 12)
                 {
                     Main._modEntry.Logger.Log($"time ran out after {viableTrainCars[i].name} index: {i}");
                     yield return null;
@@ -624,9 +624,9 @@ namespace PersistentJobsMod.Optimization
                         }
                         else succesfullCars.Add(carData);
 
-                        if (fst.ElapsedMilliseconds > 12)
+                        if (fst.ElapsedMilliseconds > 8)
                         {
-                            Main._modEntry.Logger.Log($"time ran out after {guid} index {succesfullCars.Count}");
+                            Main._modEntry.Logger.Log($"time ran out after {guid} index {succesfullCars.Count}, time: {fst.Elapsed}");
                             yield return ("frame time elapsed", null);
                             fst.Restart();
                         }
