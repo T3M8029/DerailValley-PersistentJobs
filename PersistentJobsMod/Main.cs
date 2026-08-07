@@ -1,4 +1,8 @@
-﻿using HarmonyLib;
+﻿using DV.Common;
+using DV.UserManagement;
+using DV.UserManagement.Data;
+using DV.Utils;
+using HarmonyLib;
 using PersistentJobsMod.Model;
 using PersistentJobsMod.ModInteraction;
 using PersistentJobsMod.Utilities;
@@ -86,7 +90,8 @@ namespace PersistentJobsMod {
             try
             {
                 Settings.Save(modEntry);
-
+                (SingletonBehaviour<UserManager>.Instance.CurrentUser.CurrentSession as GameSession).Save();
+                SingletonBehaviour<SaveGameManager>.Instance.Save(SaveType.Auto, null, true);
                 PaxJobsCompat.Unload();
                 Harmony.UnpatchAll(modEntry.Info.Id);
 
