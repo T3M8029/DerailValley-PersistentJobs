@@ -42,7 +42,7 @@ namespace PersistentJobsMod.Optimization
         public static readonly Dictionary<string, (DebtTrackerBase, CarDebtData)> SuspendedCarGUIDToDebtTracker = [];
         public static readonly Dictionary<string, List<string>> StationIDtoSuspendedCarGUID = [];
 
-        public static readonly HashSet<int> OccupiedRailTrackIndexes = [];
+        public static readonly Dictionary<int, Bogie> OccupiedRailTrackIndexesToFakeBogies = [];
 
         public static readonly Dictionary<TrainCarType, float> TrainCarTypeToInterCouplerDistance = [];
 
@@ -87,8 +87,9 @@ namespace PersistentJobsMod.Optimization
                     UnityEngine.Debug.LogError($"[PersistentJobsMod] Car with GUID {carGUID} has invalid track {trainCar.logicCar.CurrentTrack.ID} saved!");
                     return returnBool;
                 }
-                OccupiedRailTrackIndexes.Add(bog1TrackChildInd);
-                OccupiedRailTrackIndexes.Add(bog2TrackChildInd);
+                if (!OccupiedRailTrackIndexesToFakeBogies.ContainsKey(bog1TrackChildInd)) OccupiedRailTrackIndexesToFakeBogies.Add(bog1TrackChildInd, null);
+                if (!OccupiedRailTrackIndexesToFakeBogies.ContainsKey(bog2TrackChildInd)) OccupiedRailTrackIndexesToFakeBogies.Add(bog2TrackChildInd, null);
+
 
                 var carJccOrNull = CarTrackAssignment.GetControllerOfCarOrNull(logicCar);
                 var yardID = (CarTrackAssignment.FindNearestNamedTrackOrNull([trainCar]))?.ID.yardId;
@@ -161,8 +162,11 @@ namespace PersistentJobsMod.Optimization
                     UnityEngine.Debug.LogError($"[PersistentJobsMod] Car with GUID {carGUID} has invalid track saved!");
                     return false;
                 }
-                OccupiedRailTrackIndexes.Remove(bog1TrackChildInd);
-                OccupiedRailTrackIndexes.Remove(bog2TrackChildInd);
+
+                OccupiedRailTrackIndexesToFakeBogies.Remove(bog1TrackChildInd);
+                OccupiedRailTrackIndexesToFakeBogies.Remove(bog2TrackChildInd);
+                RemoveFakeBogies(bog1TrackChildInd);
+                RemoveFakeBogies(bog2TrackChildInd);
 
                 string oldCarID = SuspendedCarGUIDToCarID[carGUID];
                 CurrentCarIDToResume = oldCarID;
@@ -357,6 +361,25 @@ namespace PersistentJobsMod.Optimization
             if (ownedCarStates != null)
             {
                 foreach (var ownedCarDebt in ownedCarStates) if (ownedCarDebt.carDebtTrackerBase == oldTracker) Traverse.Create(ownedCarDebt).Field("carDebtTrackerBase").SetValue(newTracker);
+            }
+        }
+
+        private static void RemoveFakeBogies(int railTrackIndex)
+        {
+            if (Main.Settings.DummyBogiesForTracksOfSuspendedCars && OccupiedRailTrackIndexesToFakeBogies.TryGetValue(railTrackIndex, out var fakeBogie))
+            {
+                var rt = AllTracks[railTrackIndex];
+                if (rt == null) return;
+                if (rt.GetComponent<RailTrackBogiesOnTrack>()?.bogiesOnTrack.Remove(fakeBogie) is true)
+                {
+                    Main._modEntry.Logger.Log($"Removed fake bogie from {rt} on car resumption");
+                    OccupiedRailTrackIndexesToFakeBogies.Remove(railTrackIndex);
+                    return;
+                }
+                else
+                {
+                    Main._modEntry.Logger.Error($"Something failed when removing fake bogies from {AllTracks[railTrackIndex]}");
+                }
             }
         }
 
@@ -610,7 +633,7 @@ namespace PersistentJobsMod.Optimization
             SuspendedCarGUIDToJobChainController.Clear();
             SuspendedCarGUIDToDebtTracker.Clear();
             StationIDtoSuspendedCarGUID.Clear();
-            OccupiedRailTrackIndexes.Clear();
+            OccupiedRailTrackIndexesToFakeBogies.Clear();
             SuspendIteration = 0;
             AllTracks = null;
         }
