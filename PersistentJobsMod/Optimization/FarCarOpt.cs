@@ -163,8 +163,6 @@ namespace PersistentJobsMod.Optimization
                     return false;
                 }
 
-                OccupiedRailTrackIndexesToFakeBogies.Remove(bog1TrackChildInd);
-                OccupiedRailTrackIndexesToFakeBogies.Remove(bog2TrackChildInd);
                 RemoveFakeBogies(bog1TrackChildInd);
                 RemoveFakeBogies(bog2TrackChildInd);
 
