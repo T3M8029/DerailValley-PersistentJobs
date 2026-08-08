@@ -193,9 +193,10 @@ namespace PersistentJobsMod.HarmonyPatches.JobGeneration {
         }
 
         private static IReadOnlyList<JobChainController> ReassignJoblessRegularTrainCarsToJobsInStationAndCreateJobChainControllers(StationController station, List<Trainset> trainsets, Random random) {
-            Main._modEntry.Logger.Log($"Reassigning train cars to jobs in station {station.logicStation.ID}: {trainsets.SelectMany(ts => ts.cars).Count()} cars in {trainsets.Count} trainsets need to be reassigned.");
-
             var result = new List<JobChainController>();
+            if (Main.yardMasterPresent) return result;
+
+            Main._modEntry.Logger.Log($"Reassigning train cars to jobs in station {station.logicStation.ID}: {trainsets.SelectMany(ts => ts.cars).Count()} cars in {trainsets.Count} trainsets need to be reassigned.");
 
             var statusTrainCarGroups = trainsets.SelectMany(s => s.cars.GroupConsecutiveBy(tc => GetTrainCarReassignStatus(tc, false))).ToList();
 

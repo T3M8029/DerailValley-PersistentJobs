@@ -43,7 +43,9 @@ namespace PersistentJobsMod.HarmonyPatches.Save {
                         Debug.LogWarning($"[PersistentJobs] could not find JobChainController for Job[{chainSaveData.firstJobId}]; skipping track reservation!");
                     } else if (jobChainController.currentJobInChain.jobType == JobType.ShuntingLoad) {
                         Main._modEntry.Logger.Log($"skipping track reservation for job {jobChainController.currentJobInChain.ID} because it's a shunting load job");
-                    } else {
+                    } else if ((byte)jobChainController.currentJobInChain.jobType > 5) {
+                        Main._modEntry.Logger.Log($"skipping track reservation for job {jobChainController.currentJobInChain.ID} because it's of a custom job type");
+                    } else  {
                         Main._modEntry.Logger.Log($"reserving tracks for loaded job {jobChainController.currentJobInChain.ID}");
                         jobChainController.ReserveRequiredTracks(true);
                     }

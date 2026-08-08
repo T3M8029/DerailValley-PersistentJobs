@@ -23,7 +23,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
         public static bool Prefix(JobValidator __instance, PrinterController ___bookletPrinter,
             JobOverview jobOverview) {
             try {
-                if (!Main._modEntry.Active || !MultiplayerShim.IsHost || (UnityModManager.FindMod("SelfShunt")?.Active == true)) return true;
+                if (!Main._modEntry.Active || !MultiplayerShim.IsHost) return true;
 
                 var job = jobOverview.job;
                 var allStations = UnityEngine.Object.FindObjectsOfType<StationController>();
@@ -39,6 +39,9 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators {
                     __instance.StartCoroutine(HandleJobAcceptnceFaliure(___bookletPrinter, false));
                     return false;
                 }
+
+                //let the mod handle it on its own
+                if (Main.yardMasterPresent) return true;
 
                 // expire the job if all associated cars are outside the job destruction range
                 // the base method's logic will handle generating the expired report

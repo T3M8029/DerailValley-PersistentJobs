@@ -37,6 +37,8 @@ namespace PersistentJobsMod {
 
         public static Settings Settings { get; private set; }
 
+        public static bool yardMasterPresent = false;
+
         public static UnityModManager.ModEntry PaxJobs { get; set; }
         public static bool paxJobsPresent = false;
         public static bool PaxJobsPresent
@@ -80,9 +82,10 @@ namespace PersistentJobsMod {
             if (WorldStreamingInit.IsStreamingDone) SetupOnReload();
 
             TryLoadPaxJobsCompat();
+            YardMasterInit();
+            InitializeMPShim(_modEntry);
+            _modEntry.OnLateUpdate += InitializeMPShim;
 
-            InitializeShim(_modEntry);
-            _modEntry.OnLateUpdate += InitializeShim;
             Pause = false;
         }
 
@@ -135,11 +138,11 @@ namespace PersistentJobsMod {
 
         static void OnGUI(UnityModManager.ModEntry modEntry) {
             Settings.Draw(modEntry);
+            Settings.DrawButtons();
         }
 
         static void OnSaveGUI(UnityModManager.ModEntry modEntry) {
             Settings.Save(modEntry);
-            Settings.DrawButtons();
         }
 
         private static void SetupOnReload()
@@ -192,11 +195,17 @@ namespace PersistentJobsMod {
             }
         }
 
-        public static void InitializeShim(ModEntry modEntry, float _ = 0)
+        public static void InitializeMPShim(ModEntry modEntry, float _ = 0)
         {
             modEntry.Logger.Log("Trying to load compatibility with MP mod");
-            modEntry.OnLateUpdate -= InitializeShim;
+            modEntry.OnLateUpdate -= InitializeMPShim;
             MultiplayerShim.Initialize(_modEntry);
+        }
+
+        private static void YardMasterInit()
+        {
+            yardMasterPresent = (UnityModManager.FindMod("SelfShunt")?.Active == true);
+            if (yardMasterPresent) _modEntry.Logger.Log("Yard Master mod is present, most job-related features will be disabled");
         }
 
         public static void HandleUnhandledException(Exception e, string location) {

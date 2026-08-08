@@ -6,7 +6,7 @@ namespace PersistentJobsMod.HarmonyPatches.JobValidators
 {
     public static class JobValidator_SummonAllActiveJobBooklets_Patch
     {
-        [HarmonyPatch(typeof(JobValidator), "SummonAllActiveJobBooklets_Patch")]
+        [HarmonyPatch(typeof(JobValidator), "SummonAllActiveJobBooklets")]
         [HarmonyPostfix]
         public static void Postfix()
         {
