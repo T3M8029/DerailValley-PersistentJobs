@@ -269,7 +269,7 @@ namespace PersistentJobsMod.ModInteraction
             }
             catch (Exception e)
             {
-                Main._modEntry.Logger.LogException("Failed to initilize PaxJobsCompat when resolving types and methods", e);
+                Main._modEntry.Logger.LogException("Failed to initialize PaxJobsCompat when resolving types and methods", e);
                 return false;
             }
 
@@ -529,10 +529,10 @@ namespace PersistentJobsMod.ModInteraction
 
             Main._modEntry.Logger.Log($"Picked platform {GetRouteTrackTrackField(preferredRouteTrack).ID.FullDisplayID} ");
 
-            if (TryGenerateJob(station, jobType, preferredRouteTrack, trainCars, out JobChainController passangerChainController))
+            if (TryGenerateJob(station, jobType, preferredRouteTrack, trainCars, out JobChainController passengerChainController))
             {
-                Main._modEntry.Logger.Log($"Successfully reassigned pax consist starting with {trainCars.First().ID} to job {passangerChainController.currentJobInChain.ID}");
-                result.Add(passangerChainController);
+                Main._modEntry.Logger.Log($"Successfully reassigned pax consist starting with {trainCars.First().ID} to job {passengerChainController.currentJobInChain.ID}");
+                result.Add(passengerChainController);
                 return result;
             }
 
@@ -554,7 +554,7 @@ namespace PersistentJobsMod.ModInteraction
             {
                 foreach (var emptyTrainCars in emptyConsecutiveTrainCarGroups)
                 {
-                    Main._modEntry.Logger.Log($"Spilitting consist starting with car {emptyTrainCars.First().ID}");
+                    Main._modEntry.Logger.Log($"Splitting consist starting with car {emptyTrainCars.First().ID}");
                     var (first, second) = emptyTrainCars.SplitInHalf();
                     HandleEmptyPaxCars(first, station, out List<JobChainController> outJobChainControllers);
                     result.AddRange(outJobChainControllers);
@@ -567,7 +567,7 @@ namespace PersistentJobsMod.ModInteraction
             {
                 foreach (var loadedTrainCars in loadedConsecutiveTrainCarGroups)
                 {
-                    Main._modEntry.Logger.Log($"Spilitting consist starting with car {loadedTrainCars.First().ID}");
+                    Main._modEntry.Logger.Log($"Splitting consist starting with car {loadedTrainCars.First().ID}");
                     var (first, second) = loadedTrainCars.SplitInHalf();
                     HandleLoadedPaxCars(first, station, out List<JobChainController> outJobChainControllers);
                     result.AddRange(outJobChainControllers);
@@ -593,7 +593,7 @@ namespace PersistentJobsMod.ModInteraction
         public static List<JobChainController> DecideForPaxCarGroups(List<IReadOnlyList<TrainCar>> paxConsecutiveTrainCarGroups, StationController station)
         {
             List<JobChainController> result = new();
-            Main._modEntry.Logger.Log($"Reassigning passanger cars to jobs in station {station.logicStation.ID}");
+            Main._modEntry.Logger.Log($"Reassigning passenger cars to jobs in station {station.logicStation.ID}");
 
             EnsureTrainCarsAreConvertedToNonPlayerSpawned(FilterTrainCarGroups(paxConsecutiveTrainCarGroups).SelectMany(tcg => tcg).ToList());
 
@@ -840,7 +840,7 @@ namespace PersistentJobsMod.ModInteraction
                         var headTask = chainSaveData.currentJobTaskData[0];
                         if ((headTask.type == TaskType.Sequential) && (headTask is ComplexTaskSaveData complexData && complexData.tasksData.Length > 0))
                         {
-                            //there are two warehouse tasks for each intermediate stations + the initial load + final unload - cahnged in PaxJ v.5.2, logic should still apply tho
+                            //there are two warehouse tasks for each intermediate stations + the initial load + final unload - changed in PaxJ v.5.2, logic should still apply tho
                             int numWarehouseTasks = complexData.tasksData.Count(tsd => tsd.type == _CityLoadingTaskType);
                             if (numWarehouseTasks < 1) Main._modEntry.Logger.Error("Unexpected task structure for job " + genCtx.ForcedJobId);
                             if ((numWarehouseTasks % 2) == 0) return PaxJobGenerationMode.Loaded_Taken_From_Empty;
@@ -981,7 +981,7 @@ namespace PersistentJobsMod.ModInteraction
             else
             {
                 Main._modEntry.Logger.Log($"Loaded consist of {trainCars.Count()} pax cars starting with {trainCars.First().ID} on track {startingTrack.ID.FullID} needs to be transported to a pax jobs station to get unloaded");
-                //generate FH job to random pax station: use already existing mod logic elswhere
+                //generate FH job to random pax station: use already existing mod logic elsewhere
                 StationController viableDestStation = FindDestinationStation(station, trainCars);
                 if (viableDestStation != null)
                 {
@@ -1029,7 +1029,7 @@ namespace PersistentJobsMod.ModInteraction
             else
             {
                 Main._modEntry.Logger.Log($"Empty consist of {trainCars.Count()} pax cars starting with {trainCars.First().ID} on track {startingTrack.ID.FullID} needs to be transported to a pax jobs station to get reassigned a pax job");
-                //generate LH job to random pax station: use already existing mod logic elswhere
+                //generate LH job to random pax station: use already existing mod logic elsewhere
                 StationController viableDestStation = FindDestinationStation(station, trainCars);
                 if (viableDestStation != null)
                 {
@@ -1122,12 +1122,12 @@ namespace PersistentJobsMod.ModInteraction
             StationController generatingStation = (StationController)_PaxJGeneratorStContField.GetValue(__instance);
             if (StationIdCarSpawningPersistence.Instance.GetHasStationSpawnedCarsFlag(generatingStation) && !OverrideSpawnFlagForPaxJ)
             {
-                Main._modEntry.Logger.Log($"Station {generatingStation.logicStation.ID} has already spawned cars, skipping passanger jobs with new cars generation");
+                Main._modEntry.Logger.Log($"Station {generatingStation.logicStation.ID} has already spawned cars, skipping passenger jobs with new cars generation");
                 return false;
             }
             else
             {
-                Main._modEntry.Logger.Log($"Station {generatingStation.logicStation.ID} is generating passanger jobs with cars");
+                Main._modEntry.Logger.Log($"Station {generatingStation.logicStation.ID} is generating passenger jobs with cars");
                 OverrideSpawnFlagForPaxJ = false;
                 return true;
             }

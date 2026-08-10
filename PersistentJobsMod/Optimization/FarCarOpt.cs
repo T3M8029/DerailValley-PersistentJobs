@@ -171,7 +171,7 @@ namespace PersistentJobsMod.Optimization
                 TrainCar trainCar = CarsSaveManager.InstantiateCarFromSavegame(carObj, allTracks);
                 Car logicCar = trainCar.logicCar;
                 string newCarGUID = logicCar.carGuid;
-                if (!(oldCarID == logicCar.ID && carGUID == newCarGUID)) throw new Exception("Restored trainCar doesn´t match");
+                if (!(oldCarID == logicCar.ID && carGUID == newCarGUID)) throw new Exception("Restored trainCar does not match");
 
                 CarsSaveManager.SetBrakesOnSpawn(trainCar);
                 carObject = carObj;
@@ -274,7 +274,7 @@ namespace PersistentJobsMod.Optimization
                                 break;
                             }
                         }
-                        Main._modEntry.Logger.Warning("Unkown StaticJobDefiniton type encountered, won´t be updated!");
+                        Main._modEntry.Logger.Warning("Unknown StaticJobDefinition type encountered, won´t be updated!");
                         break;
                 }
             }
@@ -292,7 +292,7 @@ namespace PersistentJobsMod.Optimization
             bool changed = !(oldCarDebtSer.ToString() == frozenCarDebtSer.ToString());
 
             //Main._modEntry.Logger.Log($"old d: ({((oldTracker as SimulatedCarDebtTracker) != null ? "simTracker" : "carTracker")}) \n{oldCarDebtSer} \nfrozen d: {frozenCarDebtSer}");
-            //Main._modEntry.Logger.Log($"eaqual: {!changed}");
+            //Main._modEntry.Logger.Log($"equal: {!changed}");
 
             var oldComponents = oldData.GetTrackedDebts();
             var newComponents = newData.GetTrackedDebts();
@@ -428,7 +428,7 @@ namespace PersistentJobsMod.Optimization
             if (SuspendCoroRunning && SuspendCoroutine.Item1 != null)
             {
                 if (where.All(sc => SuspendCoroutine.Item2.Contains(sc))) return false;
-                Main._modEntry.Logger.Error($"SuspendCarsCoro already running on {string.Join(", ", SuspendCoroutine.Item2.Select(sc => sc.stationInfo.YardID))}, new coro on {string.Join(", ", where.Select(sc => sc.stationInfo.YardID))} enqued");
+                Main._modEntry.Logger.Error($"SuspendCarsCoro already running on {string.Join(", ", SuspendCoroutine.Item2.Select(sc => sc.stationInfo.YardID))}, new Coro on {string.Join(", ", where.Select(sc => sc.stationInfo.YardID))} enqueued");
                 PendingSuspends.Enqueue((where, optCars));
                 return false;
             }
@@ -603,7 +603,7 @@ namespace PersistentJobsMod.Optimization
 
         private static IEnumerator<(string NextStageName, object Result)> ResumeCarsCoro(List<string> guids, string location)
         {
-            List<JObject> succesfullCars = [];
+            List<JObject> successfulCars = [];
             if (guids is not null && guids.Any())
             {
                 var fst = Stopwatch.StartNew();
@@ -620,19 +620,19 @@ namespace PersistentJobsMod.Optimization
                             TrainStress.globalIgnoreStressCalculation = false;
                             throw new Exception("Failed to resume trainCar with guid " + guid);
                         }
-                        else succesfullCars.Add(carData);
+                        else successfulCars.Add(carData);
 
                         if (fst.ElapsedMilliseconds > 8)
                         {
-                            Main._modEntry.Logger.Log($"time ran out after {guid} index {succesfullCars.Count}, time: {fst.Elapsed}");
+                            Main._modEntry.Logger.Log($"time ran out after {guid} index {successfulCars.Count}, time: {fst.Elapsed}");
                             yield return ("frame time elapsed", null);
                             fst.Restart();
                         }
                     }
 
-                    foreach (var carData in succesfullCars) CarsSaveManager.RestoreCarConnections(carData);
+                    foreach (var carData in successfulCars) CarsSaveManager.RestoreCarConnections(carData);
 
-                    UnityEngine.Debug.Log($"[PersistentJobsMod] Successfully resumed {succesfullCars.Count} cars {(location.Length > 0 ? ("in " + location) : "")} in {ResumeStopwatch.Elapsed}");
+                    UnityEngine.Debug.Log($"[PersistentJobsMod] Successfully resumed {successfulCars.Count} cars {(location.Length > 0 ? ("in " + location) : "")} in {ResumeStopwatch.Elapsed}");
                     ResumeStopwatch.Reset();
                 }
                 finally

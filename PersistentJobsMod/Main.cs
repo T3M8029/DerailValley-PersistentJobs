@@ -170,7 +170,7 @@ namespace PersistentJobsMod {
 
             if (PaxJobsPresent)
             {
-                _modEntry.Logger.Error("PaxJobs compatibility already loded!");
+                _modEntry.Logger.Error("PaxJobs compatibility already loaded!");
                 return;
             }
 
@@ -181,7 +181,7 @@ namespace PersistentJobsMod {
                 if (!PaxJobsCompat.Initialize())
                 {
                     PaxJobsPresent = false;
-                    _modEntry.Logger.Error("Passanger Jobs compatibility failed to load!");
+                    _modEntry.Logger.Error("Passenger Jobs compatibility failed to load!");
                     HarmonyPatches.Save.WorldStreaminInit_Patch.ShowPopupOnPlayerSpawn($"Passenger Jobs mod v{PaxJobs.Version} is present but the Persistent Jobs compatibility layer is not loaded. \nThis is probably due to a recent update (check mod pages or ask on the Altfuture discord). \nThe game should be in a playable state,\n but new passenger jobs may not be generated and cars will remain jobless.");
                 }
                 else
@@ -191,7 +191,7 @@ namespace PersistentJobsMod {
             }
             else
             {
-                _modEntry.Logger.Log($"Targeted version of optional mod Passanger Jobs (5.3) is not present, inactive, or has ran into errors, skipping mod compatibility");
+                _modEntry.Logger.Log($"Targeted version of optional mod Passenger Jobs (5.3) is not present, inactive, or has ran into errors, skipping mod compatibility");
             }
         }
 

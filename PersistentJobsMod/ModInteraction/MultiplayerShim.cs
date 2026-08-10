@@ -38,7 +38,7 @@ namespace PersistentJobsMod.ModInteraction
         {
             UnityModManager.ModEntry? multiplayer = UnityModManager.FindMod(MULTIPLAYER_MOD_ID);
             var mpapiAssembly = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(a => a.GetName().Name == MPAPI_ASSEMBLY_NAME);
-            modEntry.Logger.Log("Trying to initilize compatibility with MP mod");
+            modEntry.Logger.Log("Trying to initialize compatibility with MP mod");
 
             try
             {
