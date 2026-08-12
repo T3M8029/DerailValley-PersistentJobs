@@ -279,7 +279,7 @@ namespace PersistentJobsMod.ModInteraction
         public static void Unload()
         {
             Main._modEntry.Logger.Log("Unloading PaxJobs compatibility layer, unpatching relevant patches");
-            UnpatchAll();
+            UnpatchAllIn(typeof(PaxJobsCompat));
             Main.paxJobsPresent = false;
         }
 

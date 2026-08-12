@@ -3,6 +3,7 @@ using MessageBox;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 
@@ -53,7 +54,7 @@ namespace PersistentJobsMod.Utilities
             return false;
         }
 
-        public static List<(MethodInfo target, Type patchContainer, string patchMethodName)> patchRecord = new();
+        public static List<(MethodInfo target, Type patchContainer, string patchMethodName)> PatchRecord = [];
 
         public static void PatchPrefix(MethodInfo target, Type patchContainer, string patchMethodName) => PatchMethod(target, patchContainer, patchMethodName, (harmony, t, hm) => harmony.Patch(t, prefix: hm), (target.DeclaringType.Namespace + "." + target.DeclaringType.Name + "." + target.Name));
 
@@ -77,7 +78,7 @@ namespace PersistentJobsMod.Utilities
                 throw new MethodAccessException();
             }
 
-            if (patchRecord.Contains((target, patchContainer, patchMethodName)))
+            if (PatchRecord.Contains((target, patchContainer, patchMethodName)))
             {
                 Main._modEntry.Logger.Error($"Patch {patchMethodName} on {target.Name} already applied, aborting!");
                 throw new ArgumentException();
@@ -85,7 +86,7 @@ namespace PersistentJobsMod.Utilities
 
             applyPatch(Main.Harmony, target, new HarmonyMethod(patchMethod));
 
-            patchRecord.Add((target, patchContainer, patchMethodName));
+            PatchRecord.Add((target, patchContainer, patchMethodName));
 
             Main._modEntry.Logger.Log($"Successfully patched {logName}");
         }
@@ -106,7 +107,7 @@ namespace PersistentJobsMod.Utilities
                 throw new MethodAccessException();
             }
 
-            if (patchRecord.Contains((target, patchContainer, patchMethodName)))
+            if (PatchRecord.Contains((target, patchContainer, patchMethodName)))
             {
                 Main._modEntry.Logger.Error($"Patch {patchMethodName} on {target.Name} already applied, aborting!");
                 throw new ArgumentException();
@@ -114,14 +115,37 @@ namespace PersistentJobsMod.Utilities
 
             Main.Harmony.CreateReversePatcher(target, new HarmonyMethod(patchMethod)).Patch();
 
-            patchRecord.Add((target, patchContainer, patchMethodName));
+            PatchRecord.Add((target, patchContainer, patchMethodName));
 
             Main._modEntry.Logger.Log($"Successfully reverse patched {logName}");
         }
 
-        public static void UnpatchAll()
+        public static void UnpatchAllIn(Type patchContainerType = null)
         {
             StringBuilder s = new();
+            if (patchContainerType is null)
+            {
+                UnpatchMany(PatchRecord, ref s);
+            }
+            else
+            {
+                UnpatchMany(PatchRecord.Where(p => p.patchContainer == patchContainerType).ToList(), ref s);
+            }
+            if (s.Length > 0)
+            {
+                if (!WorldStreamingInit.IsLoaded)
+                {
+                    HarmonyPatches.Save.WorldStreaminInit_Patch.ShowPopupOnPlayerSpawn("State is not clean, there might be problems. \n" + s);
+                }
+                else
+                {
+                    PopupAPI.ShowOk("State is not clean, there might be problems. \n" + s);
+                }
+            }
+        }
+
+        private static void UnpatchMany(List<(MethodInfo target, Type patchContainer, string patchMethodName)> patchRecord, ref StringBuilder s)
+        {
             foreach (var (target, patchContainer, patchMethodName) in patchRecord)
             {
                 try
@@ -136,17 +160,7 @@ namespace PersistentJobsMod.Utilities
                 }
             }
             patchRecord.Clear();
-            if (s.Length > 0)
-            {
-                if (!WorldStreamingInit.IsLoaded)
-                {
-                    HarmonyPatches.Save.WorldStreaminInit_Patch.ShowPopupOnPlayerSpawn("State is not clean, there might be problems. \n" + s);
-                }
-                else
-                {
-                    PopupAPI.ShowOk("State is not clean, there might be problems. \n" + s);
-                }
-            }
+            PatchRecord.RemoveAll(r => patchRecord.Contains(r));
         }
     }
 }

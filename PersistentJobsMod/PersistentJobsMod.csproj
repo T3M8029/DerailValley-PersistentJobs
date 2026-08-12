@@ -161,6 +161,7 @@
     <Compile Include="Utilities\PlayerSpawnedCarUtilities.cs" />
     <Compile Include="Utilities\ReflectionUtilities.cs" />
     <Compile Include="Utilities\TaskUtilities.cs" />
+    <Compile Include="Utilities\TokenizedFlagHolder.cs" />
     <Compile Include="Utilities\TranspilingUtilities.cs" />
     <Compile Include="HarmonyPatches\JobChainControllers\JobChainController_OnLastJobInChainCompleted_Patch.cs" />
     <Compile Include="HarmonyPatches\JobChainControllers\JobChainController_ReserveRequiredTracks_Patch.cs" />

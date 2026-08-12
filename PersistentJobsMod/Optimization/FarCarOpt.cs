@@ -613,7 +613,7 @@ namespace PersistentJobsMod.Optimization
                     Main._modEntry.Logger.Log($"about to resume {guids.Count} cars in {location}");
                     foreach (var guid in guids)
                     {
-                        if (ResumeStopwatch.Elapsed.TotalMinutes > 4) throw new TimeoutException($"{nameof(ResumeCarsCoro)} has ran for too long!");
+                        if (ResumeStopwatch.Elapsed.TotalMinutes > 8) throw new TimeoutException($"{nameof(ResumeCarsCoro)} has ran for too long!");
 
                         if (!ResumeCar(guid, out JObject carData))
                         {
