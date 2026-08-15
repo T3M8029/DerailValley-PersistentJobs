@@ -78,7 +78,7 @@ namespace PersistentJobsMod {
             modEntry.OnSaveGUI = OnSaveGUI;
 
             WorldStreamingInit.LoadingFinished += WorldStreamingInitLoadingFinished;
-            //when coming from a reload things need to be re-initilized
+            //when coming from a reload things need to be re-initialized
             if (WorldStreamingInit.IsStreamingDone) SetupOnReload();
 
             TryLoadPaxJobsCompat();

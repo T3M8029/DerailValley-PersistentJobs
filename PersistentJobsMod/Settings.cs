@@ -38,14 +38,14 @@ namespace PersistentJobsMod
 
                 GUILayout.BeginVertical();
                 GUILayout.Space(20);
-                if (GUILayout.Button("Resume all cars", GUILayout.Width(80))) PersistentJobsMod.Optimization.FarCarOpt.ResumeCarsInStation("ALL");
+                if (GUILayout.Button("Resume all cars")) PersistentJobsMod.Optimization.FarCarOpt.ResumeCarsInStation("ALL");
 
                 foreach (var stationID in stations)
                 {
                     if (PersistentJobsMod.Optimization.FarCarOpt.StationIDtoSuspendedCarGUID.TryGetValue(stationID, out var suspended) && suspended?.Any() is true)
                     {
                         GUILayout.Space(5);
-                        if (GUILayout.Button($"Resume cars in {stationID}", GUILayout.Width(80))) PersistentJobsMod.Optimization.FarCarOpt.ResumeCarsInStation(stationID);
+                        if (GUILayout.Button($"Resume cars in {stationID}")) PersistentJobsMod.Optimization.FarCarOpt.ResumeCarsInStation(stationID);
                     }
                 }
 

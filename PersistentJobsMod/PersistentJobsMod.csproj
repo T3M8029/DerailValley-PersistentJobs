@@ -139,6 +139,7 @@
     <Compile Include="HarmonyPatches\Optimization\LostAndFoundItemsSummoner_Patch.cs" />
     <Compile Include="HarmonyPatches\Optimization\RailTrackEx_BogiesOnTrack_Patch.cs" />
     <Compile Include="HarmonyPatches\Optimization\SimControllerPatches.cs" />
+    <Compile Include="HarmonyPatches\Optimization\Track_Occupation_Patches.cs" />
     <Compile Include="HarmonyPatches\Pausing\FastTravelController_Patches.cs" />
     <Compile Include="HarmonyPatches\Pausing\LoadingScreenManager_Patches.cs" />
     <Compile Include="HarmonyPatches\Pausing\PauseMenuController_Patches.cs" />

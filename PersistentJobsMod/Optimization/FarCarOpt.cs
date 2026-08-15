@@ -44,6 +44,7 @@ namespace PersistentJobsMod.Optimization
 
         public static readonly Dictionary<int, Bogie> OccupiedRailTrackIndexesToFakeBogies = [];
 
+        public static readonly Dictionary<Track, float> TracksToSpaceOccupiedBySuspendedCars = [];
         public static readonly Dictionary<TrainCarType, float> TrainCarTypeToInterCouplerDistance = [];
 
         public static event Action<string> ResumeCompleted;
@@ -53,6 +54,7 @@ namespace PersistentJobsMod.Optimization
         {
             CurrentTrainCarToSuspend = null;
             bool returnBool = false;
+            string carGUID;
             try
             {
                 if (trainCar is null) return returnBool;
@@ -67,7 +69,7 @@ namespace PersistentJobsMod.Optimization
 
                 CurrentTrainCarToSuspend = trainCar;
                 Car logicCar = trainCar.logicCar;
-                string carGUID = logicCar.carGuid;
+                carGUID = logicCar.carGuid;
                 string carID = logicCar.ID;
 
                 if (SuspendedCarObjects.ContainsKey(carGUID))
@@ -106,6 +108,7 @@ namespace PersistentJobsMod.Optimization
                         frozenCarDebtData = new(tracker.GetDebtData());
                     }
                 }
+                trainCar.UpdateJobIdOnCarPlates(string.Empty);
 
                 SuspendedCarObjects.Add(carGUID, carObj);
                 SuspendedCarIDToCarGUID.Add(carID, carGUID);
@@ -118,6 +121,11 @@ namespace PersistentJobsMod.Optimization
 
                 if (StationIDtoSuspendedCarGUID.TryGetValue(yardID ?? "#Y", out var carGuids)) carGuids.Add(carGUID);
                 else StationIDtoSuspendedCarGUID.Add(yardID ?? "#Y", [carGUID]);
+
+                var carLength = CarSpawner.Instance.GetTotalTrainCarsLength([logicCar], true);
+                var logicTrack = logicCar.CurrentTrack;
+                if (logicTrack != null && TracksToSpaceOccupiedBySuspendedCars.ContainsKey(logicTrack)) TracksToSpaceOccupiedBySuspendedCars[logicTrack] += carLength;
+                else TracksToSpaceOccupiedBySuspendedCars.Add(logicTrack, carLength);
 
                 SingletonBehaviour<IdGenerator>.Instance.carGuidToCar.Remove(carGUID);
                 SingletonBehaviour<CarSpawner>.Instance.DeleteCar(trainCar);
@@ -169,6 +177,7 @@ namespace PersistentJobsMod.Optimization
                 string oldCarID = SuspendedCarGUIDToCarID[carGUID];
                 CurrentCarIDToResume = oldCarID;
                 TrainCar trainCar = CarsSaveManager.InstantiateCarFromSavegame(carObj, allTracks);
+                if (trainCar is null) return false;
                 Car logicCar = trainCar.logicCar;
                 string newCarGUID = logicCar.carGuid;
                 if (!(oldCarID == logicCar.ID && carGUID == newCarGUID)) throw new Exception("Restored trainCar does not match");
@@ -177,6 +186,14 @@ namespace PersistentJobsMod.Optimization
                 carObject = carObj;
                 //CarsSaveManager.RestoreCarConnections(carObject);
 
+                var carLength = CarSpawner.Instance.GetTotalTrainCarsLength([logicCar], true);
+                var logicTrack = logicCar.CurrentTrack;
+                if (logicTrack != null && TracksToSpaceOccupiedBySuspendedCars.ContainsKey(logicTrack))
+                {
+                    TracksToSpaceOccupiedBySuspendedCars[logicTrack] -= carLength;
+                    if (TracksToSpaceOccupiedBySuspendedCars[logicTrack] < 0.1f) TracksToSpaceOccupiedBySuspendedCars.Remove(logicTrack);
+                }
+
                 SuspendedCarGUIDToJobChainController.TryGetValue(carGUID, out var jcc);
 
                 if (jcc is not null)
@@ -184,6 +201,7 @@ namespace PersistentJobsMod.Optimization
                     ReplaceCarInJcc(jcc, oldCarID, logicCar);
                     trainCar.UpdateJobIdOnCarPlates(jcc.currentJobInChain.ID);
                 }
+                else trainCar.UpdateJobIdOnCarPlates(string.Empty);
 
                 var newDebtController = trainCar.GetComponent<CarDebtController>();
                 if (newDebtController != null && SuspendedCarGUIDToDebtTracker.TryGetValue(carGUID, out var tuple))
@@ -232,16 +250,23 @@ namespace PersistentJobsMod.Optimization
             {
                 Job job = sjd.job;
 
-                var jobToCarsDict = SingletonBehaviour<JobsManager>.Instance.jobToJobCars;
-                if (jobToCarsDict.TryGetValue(job, out var cars)) jobToCarsDict[job] = (cars?.Replace(oldCar, newLogicCar).ToHashSet());
-
-                //if (job.tasks[0] is not SequentialTasks sequence) continue;
-                TaskUtilities.TaskDoLeafDfs(job.tasks[0], task =>
+                if (job != null)
                 {
-                    var cars = Traverse.Create(task).Field("cars").GetValue<IList<Car>>();
-                    if (cars == null) return;
-                    if (cars.Replace(oldCar, newLogicCar) != -1) PersistentJobsModInteractionFeatures.InvokeJobCarsChanged(job, newLogicCar);
-                });
+                    var jobToCarsDict = SingletonBehaviour<JobsManager>.Instance.jobToJobCars;
+                    if (jobToCarsDict.TryGetValue(job, out var cars)) jobToCarsDict[job] = (cars?.Replace(oldCar, newLogicCar).ToHashSet());
+
+                    //if (job.tasks[0] is not SequentialTasks sequence) continue;
+                    TaskUtilities.TaskDoLeafDfs(job.tasks[0], task =>
+                    {
+                        var cars = Traverse.Create(task).Field("cars").GetValue<IList<Car>>();
+                        if (cars == null) return;
+                        if (cars.Replace(oldCar, newLogicCar) != -1) PersistentJobsModInteractionFeatures.InvokeJobCarsChanged(job, newLogicCar);
+                    });
+                }
+                else
+                {
+                    UnityEngine.Debug.LogWarning($"[PersistentJobsMod] JobChainController of car {oldCarID} has a {sjd.GetType().Name} with a null job with apparent id {Traverse.Create(sjd)?.Field("forcedJobId")?.GetValue<string>()} at index {jcc.jobChain.IndexOf(sjd)}, this shouldn´t happen!");
+                }
 
                 switch (sjd)
                 {
@@ -287,9 +312,9 @@ namespace PersistentJobsMod.Optimization
 
             if (oldData == null || newData == null || frozenCarDebtData == null) return;
 
-            var oldCarDebtSer = oldData.GetCarDebtSaveData();
-            var frozenCarDebtSer = frozenCarDebtData.GetCarDebtSaveData();
-            bool changed = !(oldCarDebtSer.ToString() == frozenCarDebtSer.ToString());
+            //var oldCarDebtSer = oldData.GetCarDebtSaveData();
+            //var frozenCarDebtSer = frozenCarDebtData.GetCarDebtSaveData();
+            //bool changed = !(oldCarDebtSer.ToString() == frozenCarDebtSer.ToString());
 
             //Main._modEntry.Logger.Log($"old d: ({((oldTracker as SimulatedCarDebtTracker) != null ? "simTracker" : "carTracker")}) \n{oldCarDebtSer} \nfrozen d: {frozenCarDebtSer}");
             //Main._modEntry.Logger.Log($"equal: {!changed}");
@@ -479,7 +504,7 @@ namespace PersistentJobsMod.Optimization
 
             var st = Stopwatch.StartNew();
             var fst = Stopwatch.StartNew();
-            cars ??= new HashSet<TrainCar>();
+            cars ??= [];
             try
             {
                 if (cars.Any()) yield return ("actually suspending cars", SuspendCars([.. cars.ToList()]));
@@ -662,6 +687,7 @@ namespace PersistentJobsMod.Optimization
             SuspendedCarGUIDToDebtTracker.Clear();
             StationIDtoSuspendedCarGUID.Clear();
             OccupiedRailTrackIndexesToFakeBogies.Clear();
+            TracksToSpaceOccupiedBySuspendedCars.Clear();
             SuspendIteration = 0;
             AllTracks = null;
         }
