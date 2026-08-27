@@ -91,7 +91,8 @@ namespace PersistentJobsMod.Optimization
                 }
                 if (!OccupiedRailTrackIndexesToFakeBogies.ContainsKey(bog1TrackChildInd)) OccupiedRailTrackIndexesToFakeBogies.Add(bog1TrackChildInd, null);
                 if (!OccupiedRailTrackIndexesToFakeBogies.ContainsKey(bog2TrackChildInd)) OccupiedRailTrackIndexesToFakeBogies.Add(bog2TrackChildInd, null);
-
+                SignalOccupation.OccupyTrack(carID, AllTracks[bog1TrackChildInd]);
+                SignalOccupation.OccupyTrack(carID, AllTracks[bog2TrackChildInd]);
 
                 var carJccOrNull = CarTrackAssignment.GetControllerOfCarOrNull(logicCar);
                 var yardID = (CarTrackAssignment.FindNearestNamedTrackOrNull([trainCar]))?.ID.yardId;
@@ -192,9 +193,6 @@ namespace PersistentJobsMod.Optimization
                     return false;
                 }
 
-                RemoveFakeBogies(bog1TrackChildInd);
-                RemoveFakeBogies(bog2TrackChildInd);
-
                 string oldCarID = SuspendedCarGUIDToCarID[carGUID];
                 CurrentCarIDToResume = oldCarID;
                 TrainCar trainCar = CarsSaveManager.InstantiateCarFromSavegame(carObj, allTracks);
@@ -207,6 +205,11 @@ namespace PersistentJobsMod.Optimization
                 Car logicCar = trainCar.logicCar;
                 string newCarGUID = logicCar.carGuid;
                 if (!(oldCarID == logicCar.ID && carGUID == newCarGUID)) throw new Exception("Restored trainCar does not match");
+
+                RemoveFakeBogies(bog1TrackChildInd);
+                RemoveFakeBogies(bog2TrackChildInd);
+                SignalOccupation.FreeTrack(logicCar.ID, AllTracks[bog1TrackChildInd]);
+                SignalOccupation.FreeTrack(logicCar.ID, AllTracks[bog2TrackChildInd]);
 
                 CarsSaveManager.SetBrakesOnSpawn(trainCar);
                 carObject = carObj;

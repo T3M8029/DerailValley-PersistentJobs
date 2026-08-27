@@ -149,6 +149,7 @@
     <Compile Include="HarmonyPatches\Trashcan\JobAbandoner_Patches.cs" />
     <Compile Include="ModInteraction\MultiplayerShim.cs" />
     <Compile Include="ModInteraction\PaxJobsCompat.cs" />
+    <Compile Include="ModInteraction\SignalOccupation.cs" />
     <Compile Include="Optimization\FarCarOpt.cs" />
     <Compile Include="Settings.cs" />
     <Compile Include="Utilities\AdditionalInformationException.cs" />

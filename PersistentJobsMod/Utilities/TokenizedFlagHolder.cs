@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace PersistentJobsMod.Utilities
 {
-    public sealed class TokenizedFlagHolder<TFlag, TObject>(TObject heldObject,Func<TObject, TFlag, bool> onRaised, Func<TObject, TFlag, bool> onLowered) where TFlag : notnull
+    public sealed class TokenizedFlagHolder<TFlag, TObject>(TObject heldObject, Func<TObject, TFlag, bool> onRaised, Func<TObject, TFlag, bool> onLowered) where TFlag : notnull
     {
         public readonly HashSet<TFlag> Callers = [];
 

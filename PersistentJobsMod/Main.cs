@@ -157,6 +157,7 @@ namespace PersistentJobsMod {
             DetailedCargoGroups.Initialize();
             EmptyTrainCarTypeDestinations.Initialize();
             ErrorSoundLogHandler.SoundEnabled = true;
+            SignalOccupation.Initialize();
         }
 
         private static void TryLoadPaxJobsCompat()
