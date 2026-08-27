@@ -1,4 +1,5 @@
-﻿using DV.Common;
+﻿using DV;
+using DV.Common;
 using DV.UserManagement;
 using DV.UserManagement.Data;
 using DV.Utils;
@@ -155,6 +156,7 @@ namespace PersistentJobsMod {
         private static void WorldStreamingInitLoadingFinished() {
             DetailedCargoGroups.Initialize();
             EmptyTrainCarTypeDestinations.Initialize();
+            ErrorSoundLogHandler.SoundEnabled = true;
         }
 
         private static void TryLoadPaxJobsCompat()
